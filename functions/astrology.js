@@ -8,25 +8,36 @@ const TOKEN_URL = 'https://api.prokerala.com/v2/token';
 
 /**
  * Gets a valid OAuth 2.0 access token from the ProKerala token endpoint.
+ * This function now correctly follows the ProKerala documentation.
  * @param {string} clientId Your ProKerala Client ID.
  * @param {string} clientSecret Your ProKerala Client Secret.
  * @returns {Promise<string>} The access token.
  */
 async function getAccessToken(clientId, clientSecret) {
     console.log('Requesting new access token...');
-    const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    
+    // --- FIX: The body must be URL-encoded with all credentials as per docs ---
+    const body = new URLSearchParams({
+        'grant_type': 'client_credentials',
+        'client_id': clientId,
+        'client_secret': clientSecret
+    });
+
     const headers = {
-        'Authorization': `Basic ${authString}`,
         'Content-Type': 'application/x-www-form-urlencoded'
     };
-    const body = 'grant_type=client_credentials';
 
-    const response = await fetch(TOKEN_URL, { method: 'POST', headers, body });
+    const response = await fetch(TOKEN_URL, { 
+        method: 'POST', 
+        headers: headers, 
+        body: body.toString() 
+    });
+
     const data = await response.json();
 
     if (!response.ok) {
         console.error('Failed to get access token:', data);
-        throw new Error('Could not authenticate with ProKerala. Check your credentials.');
+        throw new Error('Could not authenticate with ProKerala. Please check your API credentials in the Netlify environment variables.');
     }
     
     console.log('Successfully obtained access token.');
