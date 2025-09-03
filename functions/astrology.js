@@ -44,7 +44,10 @@ async function getAccessToken(clientId, clientSecret) {
 
 
 exports.handler = async (event, context) => {
+    // --- ADDED LOGGING: Confirm the function is being invoked ---
     console.log('Astrology function handler invoked successfully.');
+    console.log('Received event:', JSON.stringify(event, null, 2));
+
 
     // --- 1. Get Secret Keys from Environment Variables ---
     const CLIENT_ID = process.env.PROKERALA_CLIENT_ID;
