@@ -127,14 +127,17 @@
         calculateBtn.addEventListener('click', async () => {
             clearError();
             
-            const datetime = document.getElementById('datetime').value;
+            const datetimeLocalValue = document.getElementById('datetime').value;
             const place = placeInput.value;
             const timezone = document.getElementById('timezone').value;
             
-            if (!datetime || !place || !timezone) {
+            if (!datetimeLocalValue || !place || !timezone) {
                 showError('All fields are required.');
                 return;
             }
+
+            // --- FIX: Append seconds to the datetime string to match ISO 8601 format ---
+            const datetime = datetimeLocalValue + ':00';
 
             calculateBtn.disabled = true;
             calculateBtn.textContent = 'Geocoding...';
