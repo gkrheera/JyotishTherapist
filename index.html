@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProKerala Serverless API Prototype</title>
+    <title>Vedic Chart Serverless Prototype</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -57,12 +57,14 @@
 
         <!-- Results Section -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Parsed Data -->
             <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 lg:col-span-1">
                 <h2 class="text-xl font-semibold mb-4 text-white">Parsed Data</h2>
                 <div id="parsed-data" class="space-y-3 text-gray-300">
                     <p>Results will appear here...</p>
                 </div>
             </div>
+            <!-- Raw JSON Response -->
             <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 lg:col-span-2">
                 <h2 class="text-xl font-semibold mb-4 text-white">Raw API Responses (from Serverless Function)</h2>
                 <h3 class="text-md font-semibold mt-4 text-amber-400">Kundli Response:</h3>
@@ -124,7 +126,12 @@
 
         calculateBtn.addEventListener('click', async () => {
             clearError();
-            if (!document.getElementById('datetime').value || !placeInput.value || !document.getElementById('timezone').value) {
+            
+            const datetime = document.getElementById('datetime').value;
+            const place = placeInput.value;
+            const timezone = document.getElementById('timezone').value;
+            
+            if (!datetime || !place || !timezone) {
                 showError('All fields are required.');
                 return;
             }
@@ -133,7 +140,7 @@
             calculateBtn.textContent = 'Geocoding...';
             parsedDataEl.innerHTML = '<p>Getting location data...</p>';
             
-            const coordinates = await getCoordinates(placeInput.value);
+            const coordinates = await getCoordinates(place);
             
             if (!coordinates) {
                 showError('Could not find coordinates. Please enter a more specific place name.');
@@ -146,27 +153,21 @@
             rawKundliEl.textContent = 'Loading...';
             rawDashaEl.textContent = 'Loading...';
 
-            const body = {
-                datetime: document.getElementById('datetime').value.replace('T', ' '),
-                coordinates: coordinates,
-                timezone: document.getElementById('timezone').value
-            };
-
             try {
-                // --- FIX: Call the function directly to bypass redirect issues ---
-                // The '/api/astrology' redirect is good practice for production, but this direct path is more robust for debugging.
+                // This URL calls our secure backend function, not ProKerala directly.
                 const response = await fetch('/.netlify/functions/astrology', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
+                    body: JSON.stringify({ datetime, coordinates, timezone })
                 });
 
+                const data = await response.json();
+                
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Serverless function returned an error.');
+                    throw new Error(data.error || 'An unknown error occurred in the serverless function.');
                 }
 
-                const { kundliData, dashaData } = await response.json();
+                const { kundliData, dashaData } = data;
                 
                 rawKundliEl.textContent = JSON.stringify(kundliData, null, 2);
                 rawDashaEl.textContent = JSON.stringify(dashaData, null, 2);
@@ -178,7 +179,7 @@
                 let parsedHTML = `
                     <div>
                         <p><strong>Ascendant:</strong> <span class="text-amber-400 font-semibold">${ascendant}</span></p>
-                        <p><strong>Current Major Dasha:</strong> <span class="text-cyan-400 font-semibold">${currentDasha.name}</span></p>
+                        <p><strong>Current Major Dasha:</strong> <span class="text-cyan-400 font-semibold">${currentDasha ? currentDasha.name : 'N/A'}</span></p>
                     </div>
                     <hr class="border-gray-600 my-3">
                     <div>
