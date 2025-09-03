@@ -1,8 +1,8 @@
 {
-  "name": "jyotish-prototype-functions",
+  "name": "jyotish-prototype-backend",
   "version": "1.0.0",
-  "description": "Dependencies for Netlify serverless function.",
+  "description": "Serverless function to securely call ProKerala API.",
   "dependencies": {
-    "node-fetch": "^2.6.7"
+    "node-fetch": "^2.6.1"
   }
 }
