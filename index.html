@@ -156,8 +156,7 @@
             rawDashaEl.textContent = 'Loading...';
 
             try {
-                // --- FIX: Use the clean /api/astrology route defined in netlify.toml ---
-                // This is more robust than calling the raw function URL directly.
+                // This URL calls our secure backend function via the redirect rule in netlify.toml
                 const response = await fetch('/api/astrology', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
