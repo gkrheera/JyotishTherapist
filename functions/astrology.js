@@ -65,7 +65,6 @@ exports.handler = async (event, context) => {
         const accessToken = await getAccessToken(CLIENT_ID, CLIENT_SECRET);
         
         // 3. Get birth data from the frontend request
-        // NOTE: This version expects 'timezone' as a separate field.
         const { datetime, coordinates, timezone } = JSON.parse(event.body);
         
         // 4. Prepare API calls with the new access token
@@ -77,11 +76,12 @@ exports.handler = async (event, context) => {
             datetime: datetime,
             coordinates: coordinates,
             ayanamsa: 1, // Lahiri Ayanamsa
-            timezone: timezone // NOTE: This is the parameter that will cause the date format error.
+            timezone: timezone
         });
 
-        const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${params.toString()}`;
-        const dashaUrl = `https://api.prokerala.com/v2/astrology/major-dasha?${params.toString()}`;
+        // --- FIX: Removed /v2/ from both URLs ---
+        const kundliUrl = `https://api.prokerala.com/astrology/kundli?${params.toString()}`;
+        const dashaUrl = `https://api.prokerala.com/astrology/major-dasha?${params.toString()}`;
 
         console.log('Making GET API calls to ProKerala with access token...');
         
