@@ -1,7 +1,8 @@
-// This is your secure backend function.
+// This is your secure backend function, updated with Netlify best practices.
 // It runs in the cloud, not in the browser.
 
-const fetch = require('node-fetch');
+// The 'node-fetch' dependency has been removed as per Netlify's best practices.
+// Netlify's modern environment provides a native 'fetch' function.
 
 const TOKEN_URL = 'https://api.prokerala.com/token';
 
@@ -43,10 +44,7 @@ async function getAccessToken(clientId, clientSecret) {
 
 
 exports.handler = async (event, context) => {
-    // --- ADDED LOGGING: Confirm the function is being invoked ---
     console.log('Astrology function handler invoked successfully.');
-    console.log('Received event:', JSON.stringify(event, null, 2));
-
 
     // --- 1. Get Secret Keys from Environment Variables ---
     const CLIENT_ID = process.env.PROKERALA_CLIENT_ID;
@@ -62,13 +60,25 @@ exports.handler = async (event, context) => {
     }
 
     try {
+        // --- BEST PRACTICE: Add defensive parsing for the request body ---
+        let bodyData;
+        try {
+            if (!event.body) throw new Error('Request body is missing.');
+            bodyData = JSON.parse(event.body);
+        } catch (parseError) {
+            console.error('JSON Parsing Error:', parseError);
+            return { 
+                statusCode: 400, // Bad Request
+                body: JSON.stringify({ error: 'Invalid request body. Ensure it is valid JSON.' }) 
+            };
+        }
+        
+        const { datetime, coordinates } = bodyData;
+        
         // --- 2. Get a valid access token ---
         const accessToken = await getAccessToken(CLIENT_ID, CLIENT_SECRET);
         
-        // --- 3. Get birth data from the frontend request ---
-        const { datetime, coordinates } = JSON.parse(event.body);
-        
-        // --- 4. Prepare API calls with the new access token ---
+        // --- 3. Prepare API calls with the new access token ---
         const headers = {
             'Authorization': `Bearer ${accessToken}`
         };
@@ -84,7 +94,7 @@ exports.handler = async (event, context) => {
 
         console.log('Making GET API calls to ProKerala with corrected URLs...');
         
-        // --- 5. Make the secure, server-to-server API calls using GET ---
+        // --- 4. Make the secure, server-to-server API calls using GET ---
         const [kundliResponse, dashaResponse] = await Promise.all([
             fetch(kundliUrl, { method: 'GET', headers }),
             fetch(dashaUrl, { method: 'GET', headers })
@@ -99,7 +109,7 @@ exports.handler = async (event, context) => {
 
         console.log('Successfully fetched data. Sending back to client.');
         
-        // --- 6. Send the successful response back to the frontend ---
+        // --- 5. Send the successful response back to the frontend ---
         return {
             statusCode: 200,
             body: JSON.stringify({ kundliData, dashaData })
