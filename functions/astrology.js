@@ -91,7 +91,7 @@ exports.handler = async (event, context) => {
             ayanamsa: 1 // Lahiri Ayanamsa
         });
 
-        // --- FINAL FIX: All data endpoints must use the /v2/ prefix ---
+        // --- FINAL FIX: All data endpoints must use the /v2/ prefix, as confirmed by SDK ---
         const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${params.toString()}`;
         const dashaUrl = `https://api.prokerala.com/v2/astrology/major-dasha?${params.toString()}`;
 
