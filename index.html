@@ -136,7 +136,6 @@
                 return;
             }
 
-            // --- FIX: Append seconds and the timezone offset to match full ISO 8601 format ---
             const datetime = `${datetimeLocalValue}:00${offset}`;
 
             calculateBtn.disabled = true;
@@ -157,11 +156,11 @@
             rawDashaEl.textContent = 'Loading...';
 
             try {
-                // This URL calls our secure backend function.
-                const response = await fetch('/.netlify/functions/astrology', {
+                // --- FIX: Use the clean /api/astrology route defined in netlify.toml ---
+                // This is more robust than calling the raw function URL directly.
+                const response = await fetch('/api/astrology', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    // Send the fully formatted datetime string.
                     body: JSON.stringify({ datetime, coordinates })
                 });
 
