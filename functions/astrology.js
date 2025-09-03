@@ -1,17 +1,20 @@
 // This is your secure backend function.
 // It runs in the cloud, not in the browser.
 
-// We use 'node-fetch' for making API calls in a Node.js environment.
 const fetch = require('node-fetch');
 
 exports.handler = async (event, context) => {
+    // Added for debugging: logs when the function is called.
+    console.log('Astrology function invoked.');
+    console.log('Event Body:', event.body);
+
     // --- 1. Get Secret Keys from Environment Variables ---
-    // These are set in your Netlify dashboard, not in the code.
     const CLIENT_ID = process.env.PROKERALA_CLIENT_ID;
     const CLIENT_SECRET = process.env.PROKERALA_CLIENT_SECRET;
 
     // --- 2. Check for missing keys ---
     if (!CLIENT_ID || !CLIENT_SECRET) {
+        console.error('API credentials are not set up.');
         return {
             statusCode: 500,
             body: JSON.stringify({ error: 'API credentials are not set up in the serverless environment.' })
@@ -38,18 +41,21 @@ exports.handler = async (event, context) => {
     const dashaUrl = 'https://api.prokerala.com/v2/astrology/major-dasha';
 
     try {
+        console.log('Making API calls to ProKerala...');
         // --- 5. Make the secure, server-to-server API calls ---
         const [kundliResponse, dashaResponse] = await Promise.all([
             fetch(kundliUrl, { method: 'POST', headers, body }),
             fetch(dashaUrl, { method: 'POST', headers, body })
         ]);
 
+        console.log('ProKerala API responses received.');
         const kundliData = await kundliResponse.json();
         const dashaData = await dashaResponse.json();
         
         if (!kundliResponse.ok) throw new Error(kundliData.errors ? kundliData.errors[0].detail : 'Kundli API error.');
         if (!dashaResponse.ok) throw new Error(dashaData.errors ? dashaData.errors[0].detail : 'Dasha API error.');
 
+        console.log('Successfully fetched data. Sending back to client.');
         // --- 6. Send the successful response back to the frontend ---
         return {
             statusCode: 200,
@@ -64,3 +70,4 @@ exports.handler = async (event, context) => {
         };
     }
 };
+
