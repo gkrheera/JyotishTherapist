@@ -62,7 +62,6 @@ exports.handler = async (event, context) => {
         const accessToken = await getAccessToken(CLIENT_ID, CLIENT_SECRET);
         
         // --- 3. Get birth data from the frontend request ---
-        // The timezone is now part of the datetime string, so it's no longer needed separately.
         const { datetime, coordinates } = JSON.parse(event.body);
         
         // --- 4. Prepare API calls with the new access token ---
@@ -76,10 +75,11 @@ exports.handler = async (event, context) => {
             ayanamsa: 1 // Lahiri Ayanamsa
         });
 
-        const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${params.toString()}`;
-        const dashaUrl = `https://api.prokerala.com/v2/astrology/major-dasha?${params.toString()}`;
+        // --- FIX: Removed the /v2/ prefix from the API endpoint URLs ---
+        const kundliUrl = `https://api.prokerala.com/astrology/kundli?${params.toString()}`;
+        const dashaUrl = `https://api.prokerala.com/astrology/major-dasha?${params.toString()}`;
 
-        console.log('Making GET API calls to ProKerala with access token...');
+        console.log('Making GET API calls to ProKerala with corrected URLs...');
         
         // --- 5. Make the secure, server-to-server API calls using GET ---
         const [kundliResponse, dashaResponse] = await Promise.all([
@@ -91,7 +91,6 @@ exports.handler = async (event, context) => {
         const kundliData = await kundliResponse.json();
         const dashaData = await dashaResponse.json();
         
-        // --- FIX: Replace the placeholder {value} with the actual datetime for a clearer error message ---
         if (!kundliResponse.ok) throw new Error(kundliData.errors ? kundliData.errors[0].detail.replace('{value}', datetime) : 'Kundli API error.');
         if (!dashaResponse.ok) throw new Error(dashaData.errors ? dashaData.errors[0].detail.replace('{value}', datetime) : 'Dasha API error.');
 
