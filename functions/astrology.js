@@ -91,8 +91,8 @@ exports.handler = async (event, context) => {
             ayanamsa: 1 // Lahiri Ayanamsa
         });
 
-        // --- FINAL FIX: Use a mixed URL structure based on definitive testing ---
-        const kundliUrl = `https://api.prokerala.com/astrology/kundli?${params.toString()}`;
+        // --- FINAL FIX: All data endpoints must use the /v2/ prefix ---
+        const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${params.toString()}`;
         const dashaUrl = `https://api.prokerala.com/v2/astrology/major-dasha?${params.toString()}`;
 
         console.log('Making GET API calls to ProKerala with access token...');
