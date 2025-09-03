@@ -1,11 +1,7 @@
 // This is your secure backend function.
 // It runs in the cloud, not in the browser.
 
-// --- BEST PRACTICE 1: Remove unnecessary dependency ---
 // Netlify's modern environment includes a global fetch, so 'node-fetch' is not needed.
-// const fetch = require('node-fetch');
-
-// This is the correct, current endpoint for exchanging credentials for an access token.
 const TOKEN_URL = 'https://api.prokerala.com/token';
 
 /**
@@ -61,7 +57,6 @@ exports.handler = async (event, context) => {
     }
 
     try {
-        // --- BEST PRACTICE 2: Add robust body parsing ---
         let bodyData;
         try {
             bodyData = JSON.parse(event.body);
@@ -96,10 +91,13 @@ exports.handler = async (event, context) => {
             ayanamsa: 1 // Lahiri Ayanamsa
         });
 
-        const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${params.toString()}`;
+        // --- FINAL FIX: Use a mixed URL structure based on definitive testing ---
+        const kundliUrl = `https://api.prokerala.com/astrology/kundli?${params.toString()}`;
         const dashaUrl = `https://api.prokerala.com/v2/astrology/major-dasha?${params.toString()}`;
 
         console.log('Making GET API calls to ProKerala with access token...');
+        console.log('Kundli URL:', kundliUrl);
+        console.log('Dasha URL:', dashaUrl);
         
         // 4. Make the secure, server-to-server API calls using GET
         const [kundliResponse, dashaResponse] = await Promise.all([
