@@ -45,8 +45,8 @@
                     <p id="coords-display" class="text-xs text-gray-400 mt-1 h-4"></p>
                 </div>
                  <div>
-                    <label for="timezone" class="block text-sm font-medium text-gray-300">Timezone</label>
-                    <input type="text" id="timezone" class="w-full form-input mt-1" value="Asia/Kolkata">
+                    <label for="offset" class="block text-sm font-medium text-gray-300">Timezone Offset (e.g., +05:30)</label>
+                    <input type="text" id="offset" class="w-full form-input mt-1" value="+05:30">
                 </div>
             </div>
             <button id="calculateBtn" class="w-full bg-amber-500 text-gray-900 font-bold py-2 px-4 rounded-md hover:bg-amber-400 transition-colors duration-300 mt-6">
@@ -129,15 +129,15 @@
             
             const datetimeLocalValue = document.getElementById('datetime').value;
             const place = placeInput.value;
-            const timezone = document.getElementById('timezone').value;
+            const offset = document.getElementById('offset').value;
             
-            if (!datetimeLocalValue || !place || !timezone) {
+            if (!datetimeLocalValue || !place || !offset) {
                 showError('All fields are required.');
                 return;
             }
 
-            // --- FIX: Append seconds to the datetime string to match ISO 8601 format ---
-            const datetime = datetimeLocalValue + ':00';
+            // --- FIX: Append seconds and the timezone offset to match full ISO 8601 format ---
+            const datetime = `${datetimeLocalValue}:00${offset}`;
 
             calculateBtn.disabled = true;
             calculateBtn.textContent = 'Geocoding...';
@@ -157,11 +157,12 @@
             rawDashaEl.textContent = 'Loading...';
 
             try {
-                // This URL calls our secure backend function, not ProKerala directly.
+                // This URL calls our secure backend function.
                 const response = await fetch('/.netlify/functions/astrology', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ datetime, coordinates, timezone })
+                    // Send the fully formatted datetime string.
+                    body: JSON.stringify({ datetime, coordinates })
                 });
 
                 const data = await response.json();
