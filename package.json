@@ -1,8 +1,6 @@
 {
   "name": "jyotish-prototype-backend",
   "version": "1.0.0",
-  "description": "Serverless function to securely call ProKerala API.",
-  "dependencies": {
-    "node-fetch": "^2.6.1"
-  }
+  "description": "Serverless function to securely call ProKerala API."
 }
+
