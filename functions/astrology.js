@@ -75,7 +75,6 @@ exports.handler = async (event, context) => {
             ayanamsa: 1 // Lahiri Ayanamsa
         });
 
-        // --- FIX: Removed the /v2/ prefix from the API endpoint URLs ---
         const kundliUrl = `https://api.prokerala.com/astrology/kundli?${params.toString()}`;
         const dashaUrl = `https://api.prokerala.com/astrology/major-dasha?${params.toString()}`;
 
