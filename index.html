@@ -153,7 +153,8 @@
             };
 
             try {
-                // This is the NEW API call to our own serverless function
+                // --- FIX: Call the function directly to bypass redirect issues ---
+                // The '/api/astrology' redirect is good practice for production, but this direct path is more robust for debugging.
                 const response = await fetch('/.netlify/functions/astrology', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -205,3 +206,4 @@
     </script>
 </body>
 </html>
+
