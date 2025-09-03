@@ -8,7 +8,6 @@ const TOKEN_URL = 'https://api.prokerala.com/token';
 
 /**
  * Gets a valid OAuth 2.0 access token from the ProKerala token endpoint.
- * This function now correctly follows the ProKerala documentation.
  * @param {string} clientId Your ProKerala Client ID.
  * @param {string} clientSecret Your ProKerala Client Secret.
  * @returns {Promise<string>} The access token.
@@ -16,7 +15,6 @@ const TOKEN_URL = 'https://api.prokerala.com/token';
 async function getAccessToken(clientId, clientSecret) {
     console.log('Requesting new access token from the correct endpoint...');
     
-    // The body must be URL-encoded with all credentials as per the docs.
     const body = new URLSearchParams({
         'grant_type': 'client_credentials',
         'client_id': clientId,
@@ -79,9 +77,9 @@ exports.handler = async (event, context) => {
             timezone: timezone
         });
 
-        // --- FIX: Removed /v2/ from both URLs ---
-        const kundliUrl = `https://api.prokerala.com/astrology/kundli?${params.toString()}`;
-        const dashaUrl = `https://api.prokerala.com/astrology/major-dasha?${params.toString()}`;
+        // --- FIX: Restored the required /v2/ prefix for data endpoints ---
+        const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${params.toString()}`;
+        const dashaUrl = `https://api.prokerala.com/v2/astrology/major-dasha?${params.toString()}`;
 
         console.log('Making GET API calls to ProKerala with access token...');
         
