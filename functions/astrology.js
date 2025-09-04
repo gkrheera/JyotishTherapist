@@ -1,4 +1,4 @@
-// JyotishTherapist Backend v2.0.0
+// JyotishTherapist Backend v2.0.1
 // This is your secure backend function.
 // It runs in the cloud, not in the browser.
 
@@ -112,7 +112,8 @@ exports.handler = async (event) => {
             ayanamsa: 1 // Lahiri Ayanamsa
         });
 
-        const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${params.toString()}`;
+        // FIX: Changed endpoint to /kundli/advanced to fetch planetary positions
+        const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli/advanced?${params.toString()}`;
         const dashaUrl = `https://api.prokerala.com/v2/astrology/dasha-periods?${params.toString()}`;
 
         console.log('Making GET API calls to ProKerala with access token...');
