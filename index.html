@@ -1,4 +1,4 @@
-<!-- JyotishTherapist Frontend v2.0.0 -->
+<!-- JyotishTherapist Frontend v2.0.2 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -449,8 +449,17 @@
             function updateUI() {
                 document.getElementById('chart-name').textContent = appState.birthDetails.name;
                 
-                // Core Identity
-                const { ascendant, planets } = appState.kundliData.data;
+                // FIX: Check for 'planet_positions' and alias it to 'planets'.
+                // This makes the code robust to the API's naming convention.
+                const { ascendant, planet_positions: planets } = appState.kundliData.data;
+
+                // Defensive check to ensure planets data exists before we use it.
+                if (!planets || !Array.isArray(planets)) {
+                    console.error("Planets data is missing or not an array in the API response:", appState.kundliData.data);
+                    showError("Could not retrieve planetary positions from the API. The chart cannot be generated.");
+                    return;
+                }
+
                 const moonSign = planets.find(p => p.name === 'Moon').sign;
                 const sunSign = planets.find(p => p.name === 'Sun').sign;
                 const dashaPeriods = appState.dashaData.data.dasha_periods;
