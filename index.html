@@ -1,4 +1,4 @@
-<!-- JyotishTherapist Frontend v2.0.2 -->
+<!-- JyotishTherapist Frontend v2.0.3 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -449,19 +449,17 @@
             function updateUI() {
                 document.getElementById('chart-name').textContent = appState.birthDetails.name;
                 
-                // FIX: Check for 'planet_positions' and alias it to 'planets'.
-                // This makes the code robust to the API's naming convention.
-                const { ascendant, planet_positions: planets } = appState.kundliData.data;
+                const { ascendant, planet_positions: planets, nakshatra_details } = appState.kundliData.data;
 
-                // Defensive check to ensure planets data exists before we use it.
-                if (!planets || !Array.isArray(planets)) {
-                    console.error("Planets data is missing or not an array in the API response:", appState.kundliData.data);
-                    showError("Could not retrieve planetary positions from the API. The chart cannot be generated.");
+                if (!planets || !Array.isArray(planets) || !nakshatra_details) {
+                    console.error("Required data (planets or nakshatra_details) is missing in the API response:", appState.kundliData.data);
+                    showError("Could not retrieve complete astrological data from the API. The chart cannot be generated.");
                     return;
                 }
 
-                const moonSign = planets.find(p => p.name === 'Moon').sign;
-                const sunSign = planets.find(p => p.name === 'Sun').sign;
+                // FIX: Get Moon and Sun signs from the dedicated nakshatra_details object for better accuracy and robustness.
+                const moonSign = nakshatra_details.chandra_rasi.name;
+                const sunSign = nakshatra_details.soorya_rasi.name;
                 const dashaPeriods = appState.dashaData.data.dasha_periods;
                 const currentDasha = dashaPeriods.find(d => new Date(d.start_date) <= new Date() && new Date(d.end_date) >= new Date());
                 
