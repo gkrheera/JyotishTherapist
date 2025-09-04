@@ -1,4 +1,4 @@
-<!-- JyotishTherapist Frontend v2.0.3 -->
+<!-- JyotishTherapist Frontend v2.1.1 (Preview Mode with Date Fix) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -86,6 +86,18 @@
         .toggle-btn:first-child { border-radius: 0.375rem 0 0 0.375rem; } .toggle-btn:last-child { border-radius: 0 0.375rem 0.375rem 0; }
         
         .hidden { display: none; }
+        .loader {
+            border: 4px solid #475569;
+            border-top: 4px solid #fbbf24;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="min-h-screen p-4 sm:p-6 md:p-8">
@@ -120,7 +132,7 @@
                  <p id="coords-display" class="text-xs text-slate-400 mt-1 h-4"></p>
             </div>
             <button id="calculateBtn" class="w-full btn-primary mt-4">
-                Fetch Astrological Data
+                Generate Chart
             </button>
             <div id="error-display" class="text-red-400 text-sm mt-2 text-center h-auto p-4 bg-red-900/20 border border-red-500/30 rounded-lg hidden"></div>
         </div>
@@ -174,6 +186,83 @@
     </main>
 
     <script>
+        // --- PREVIEW MODE MOCK API ---
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options) {
+            console.log(`Intercepted fetch call to: ${url}`);
+            
+            if (url.toString().startsWith('https://nominatim.openstreetmap.org')) {
+                console.log('Returning mock geocoding data.');
+                return Promise.resolve({
+                    ok: true,
+                    json: () => Promise.resolve([{ lat: '27.5667', lon: '77.7000' }]), 
+                });
+            }
+
+            if (url.toString().includes('/api/astrology')) {
+                 console.log('Returning mock astrological data.');
+                 const mockKundliData = {
+                    "data": {
+                        "ascendant": "Leo",
+                        "nakshatra_details": {
+                            "chandra_rasi": { "name": "Aquarius" },
+                            "soorya_rasi": { "name": "Pisces" }
+                        },
+                        "planet_positions": [
+                            {"name": "Sun", "sign": "Pisces", "house": 8},
+                            {"name": "Moon", "sign": "Aquarius", "house": 7},
+                            {"name": "Mars", "sign": "Taurus", "house": 10},
+                            {"name": "Mercury", "sign": "Pisces", "house": 8},
+                            {"name": "Jupiter", "sign": "Leo", "house": 1},
+                            {"name": "Venus", "sign": "Aries", "house": 9},
+                            {"name": "Saturn", "sign": "Aquarius", "house": 7},
+                            {"name": "Rahu", "sign": "Scorpio", "house": 4},
+                            {"name": "Ketu", "sign": "Taurus", "house": 10}
+                        ]
+                    }
+                };
+                const mockDashaData = {
+                     "data": {
+                        "dasha_periods": [
+                            {"name": "Ketu", "start_date": "1992-03-10", "end_date": "1998-05-12"},
+                            {"name": "Venus", "start_date": "1998-05-12", "end_date": "2018-05-12"},
+                            {"name": "Sun", "start_date": "2018-05-12", "end_date": "2024-05-11"},
+                            {"name": "Moon", "start_date": "2024-05-11", "end_date": "2034-05-12"}
+                        ]
+                    }
+                };
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        resolve({
+                            ok: true,
+                            json: () => Promise.resolve({ kundliData: mockKundliData, dashaData: mockDashaData }),
+                        });
+                    }, 1000);
+                });
+            }
+            
+            if (url.toString().startsWith('https://generativelanguage.googleapis.com')) {
+                console.log('Returning mock AI insight.');
+                const mockInsight = {
+                    "candidates": [{
+                        "content": {
+                            "parts": [{ "text": "This is a mock AI response for preview purposes. Based on the Leo ascendant and strong placements in the 7th and 10th houses, this chart suggests a powerful presence in partnerships and career. The current Sun dasha indicates a period of heightened focus on self-identity, leadership, and public life." }]
+                        }
+                    }]
+                };
+                 return new Promise(resolve => {
+                    setTimeout(() => {
+                        resolve({
+                            ok: true,
+                            json: () => Promise.resolve(mockInsight),
+                        });
+                    }, 1500);
+                });
+            }
+
+            return originalFetch(url, options);
+        };
+
         document.addEventListener('DOMContentLoaded', function() {
             // --- STATE MANAGEMENT ---
             const appState = {
@@ -267,10 +356,11 @@
                     return;
                 }
                 
-                aiResponseEl.innerHTML = '<div class="flex justify-center"><div class="loader">Loading...</div></div>';
+                getInsightBtn.disabled = true;
+                aiResponseEl.innerHTML = '<div class="flex items-center justify-center gap-2"><div class="loader"></div><span>Generating insight...</span></div>';
                 aiResponseEl.classList.remove('hidden');
                 
-                const apiKey = "";
+                const apiKey = ""; 
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
                 const systemPrompt = "You are an expert Vedic astrologer (Jyotishi). Analyze the provided birth chart data and answer the user's question based on the principles of Vedic astrology. Provide a clear, insightful, and easy-to-understand response. Do not use markdown formatting.";
@@ -302,6 +392,8 @@
                 } catch (error) {
                     console.error("Error fetching AI insight:", error);
                     aiResponseEl.innerHTML = `<p class="text-red-400">Sorry, I couldn't retrieve an insight at this time. Please try again later.</p>`;
+                } finally {
+                    getInsightBtn.disabled = false;
                 }
             }
             
@@ -451,17 +543,17 @@
                 
                 const { ascendant, planet_positions: planets, nakshatra_details } = appState.kundliData.data;
 
-                if (!planets || !Array.isArray(planets) || !nakshatra_details) {
-                    console.error("Required data (planets or nakshatra_details) is missing in the API response:", appState.kundliData.data);
+                if (!planets || !Array.isArray(planets) || !nakshatra_details || !ascendant) {
+                    console.error("Required data (ascendant, planets, or nakshatra_details) is missing in the API response:", appState.kundliData.data);
                     showError("Could not retrieve complete astrological data from the API. The chart cannot be generated.");
                     return;
                 }
 
-                // FIX: Get Moon and Sun signs from the dedicated nakshatra_details object for better accuracy and robustness.
                 const moonSign = nakshatra_details.chandra_rasi.name;
                 const sunSign = nakshatra_details.soorya_rasi.name;
                 const dashaPeriods = appState.dashaData.data.dasha_periods;
-                const currentDasha = dashaPeriods.find(d => new Date(d.start_date) <= new Date() && new Date(d.end_date) >= new Date());
+                const today = new Date();
+                const currentDasha = dashaPeriods.find(d => new Date(d.start_date) <= today && new Date(d.end_date) >= today);
                 
                 document.getElementById('core-identity').innerHTML = `
                     <p><strong class="font-semibold text-slate-200 w-32 inline-block">Ascendant:</strong> ${ascendant}</p>
@@ -470,7 +562,6 @@
                     <p><strong class="font-semibold text-slate-200 w-32 inline-block">Current Dasha:</strong> ${currentDasha ? currentDasha.name : 'N/A'}</p>
                 `;
 
-                // Planetary Positions
                 let planetHTML = '<ul class="space-y-1">';
                 planets.forEach(p => {
                     planetHTML += `<li><strong class="font-semibold text-slate-200 w-20 inline-block">${p.name}:</strong> ${p.sign} (House ${p.house})</li>`;
@@ -478,7 +569,6 @@
                 planetHTML += '</ul>';
                 document.getElementById('planetary-positions').innerHTML = planetHTML;
                 
-                // Update chart data for rendering
                 appState.chartData.ascendant = ascendant;
                 appState.chartData.planets = {};
                 planets.forEach(p => {
@@ -519,26 +609,30 @@
                     offset: document.getElementById('offset').value,
                 };
 
-                if (!appState.birthDetails.datetimeLocal || !appState.birthDetails.place || !appState.birthDetails.offset || !appState.birthDetails.name) {
-                    showError('All fields are required.');
+                // FIX: Normalize the timezone offset value.
+                let offset = appState.birthDetails.offset.trim();
+                if (offset && !offset.startsWith('+') && !offset.startsWith('-')) {
+                    offset = '+' + offset;
+                }
+
+                if (!appState.birthDetails.datetimeLocal || !appState.birthDetails.place || !offset || !appState.birthDetails.name) {
+                    showError('All fields, including a valid timezone offset, are required.');
                     return;
                 }
                 
-                const datetime = appState.birthDetails.datetimeLocal + ':00' + appState.birthDetails.offset;
+                const datetime = appState.birthDetails.datetimeLocal + ':00' + offset;
 
                 calculateBtn.disabled = true;
-                calculateBtn.textContent = 'Geocoding...';
+                calculateBtn.innerHTML = '<div class="flex items-center justify-center gap-2"><div class="loader"></div><span>Generating...</span></div>';
                 
                 appState.coordinates = await getCoordinates(appState.birthDetails.place);
                 
                 if (!appState.coordinates) {
                     showError('Could not find coordinates. Please enter a more specific place name.');
                     calculateBtn.disabled = false;
-                    calculateBtn.textContent = 'Fetch Astrological Data';
+                    calculateBtn.textContent = 'Generate Chart';
                     return;
                 }
-
-                calculateBtn.textContent = 'Fetching Astro Data...';
                 
                 try {
                     const { kundliData, dashaData } = await fetchAstroData(datetime, appState.coordinates);
@@ -546,11 +640,10 @@
                     appState.dashaData = dashaData;
                     updateUI();
                 } catch (error) {
-                    // Error is already displayed by fetchAstroData
                     console.error('Failed to process astrological data:', error);
                 } finally {
                     calculateBtn.disabled = false;
-                    calculateBtn.textContent = 'Fetch Astrological Data';
+                    calculateBtn.textContent = 'Generate Chart';
                 }
             });
 
@@ -565,6 +658,8 @@
                     aiQuestionInput.placeholder = "Please enter a question first!";
                 }
             });
+
+            getCoordinates(placeInput.value);
         });
     </script>
 </body>
