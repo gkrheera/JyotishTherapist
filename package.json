@@ -1,5 +1,5 @@
 {
-  "name": "jyotish-prototype-backend",
-  "version": "1.0.0",
-  "description": "Serverless function to securely call ProKerala API."
+  "name": "jyotish-therapist",
+  "version": "2.0.0",
+  "description": "A dynamic web application for generating Vedic astrology charts and insights via a secure serverless backend."
 }
