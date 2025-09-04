@@ -1,4 +1,5 @@
-<!-- JyotishTherapist Frontend v2.1.1 (Production Ready) -->
+<!-- JyotishTherapist Frontend v3.0.0 (Production Ready) -->
+<!-- Implements URL query parameter passing for robust proxying. -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -254,13 +255,10 @@
                 }
             }
             
-            async function fetchAstroData(datetime, coordinates) {
+            async function fetchAstroData(queryString) {
                 try {
-                    const response = await fetch('/api/astrology', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ datetime, coordinates })
-                    });
+                    // FIX: Use GET and pass data via query string. No JSON body.
+                    const response = await fetch(`/api/astrology?${queryString}`);
                     const data = await response.json();
                     if (!response.ok) {
                         throw new Error(data.error || 'An unknown error occurred in the serverless function.');
@@ -532,7 +530,6 @@
                     offset: document.getElementById('offset').value,
                 };
 
-                // FIX: Normalize the timezone offset value.
                 let offset = appState.birthDetails.offset.trim();
                 if (offset && !offset.startsWith('+') && !offset.startsWith('-')) {
                     offset = '+' + offset;
@@ -558,7 +555,13 @@
                 }
                 
                 try {
-                    const { kundliData, dashaData } = await fetchAstroData(datetime, appState.coordinates);
+                    // FIX: Create the query string to send to the serverless function.
+                    const params = new URLSearchParams({
+                        datetime: datetime,
+                        coordinates: appState.coordinates,
+                        ayanamsa: 1
+                    });
+                    const { kundliData, dashaData } = await fetchAstroData(params.toString());
                     appState.kundliData = kundliData;
                     appState.dashaData = dashaData;
                     updateUI();
