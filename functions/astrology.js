@@ -1,26 +1,30 @@
-// JyotishTherapist Backend v2.0.1
-// This is your secure backend function.
-// It runs in the cloud, not in the browser.
+/**
+ * JyotishTherapist Backend v2.0.3
+ *
+ * This version optimizes the API calls by switching from `/kundli/advanced`
+ * to the more efficient `/kundli` endpoint, since the core chart data
+ * is fetched from `/natal-planet-position`.
+ */
+
+// A simple in-memory cache for the access token to improve performance.
+let cachedToken = {
+    accessToken: null,
+    expiresAt: 0,
+};
 
 const TOKEN_URL = 'https://api.prokerala.com/token';
 
-// --- In-memory cache for the access token ---
-// This will persist across invocations of the same function instance (i.e., "warm" functions)
-let cachedToken = null;
-let tokenExpiry = 0;
-
 /**
- * Gets a valid OAuth 2.0 access token from the ProKerala token endpoint.
- * Implements in-memory caching to reduce redundant authentication calls.
+ * Gets a valid OAuth 2.0 access token, using a cache to avoid unnecessary requests.
  * @param {string} clientId Your ProKerala Client ID.
  * @param {string} clientSecret Your ProKerala Client Secret.
  * @returns {Promise<string>} The access token.
  */
 async function getAccessToken(clientId, clientSecret) {
-    // Return cached token if it's still valid
-    if (cachedToken && tokenExpiry > Date.now()) {
-        console.log('Returning cached access token...');
-        return cachedToken;
+    // Return cached token if it's still valid (with a 5-minute buffer).
+    if (cachedToken.accessToken && cachedToken.expiresAt > Date.now() + 300 * 1000) {
+        console.log('Returning cached access token.');
+        return cachedToken.accessToken;
     }
 
     console.log('Requesting new access token...');
@@ -31,13 +35,9 @@ async function getAccessToken(clientId, clientSecret) {
         'client_secret': clientSecret
     });
 
-    const headers = {
-        'Content-Type': 'application/x-www-form-urlencoded'
-    };
-
     const response = await fetch(TOKEN_URL, { 
         method: 'POST', 
-        headers: headers, 
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, 
         body: body.toString() 
     });
 
@@ -45,32 +45,24 @@ async function getAccessToken(clientId, clientSecret) {
 
     if (!response.ok) {
         console.error('Failed to get access token:', data);
-        // Clear cache on failure
-        cachedToken = null;
-        tokenExpiry = 0;
-        throw new Error('Could not authenticate with ProKerala. Please check your API credentials in the Netlify environment variables.');
+        throw new Error('Could not authenticate with ProKerala. Check API credentials.');
     }
     
-    console.log('Successfully obtained new access token.');
+    // Cache the new token and its expiration time.
+    cachedToken.accessToken = data.access_token;
+    cachedToken.expiresAt = Date.now() + data.expires_in * 1000;
     
-    // Cache the new token and set its expiry time
-    cachedToken = data.access_token;
-    // Set expiry to 5 minutes before the actual token expiration for a safety buffer
-    tokenExpiry = Date.now() + (data.expires_in - 300) * 1000;
-
+    console.log('Successfully obtained and cached new access token.');
     return data.access_token;
 }
-
 
 exports.handler = async (event) => {
     console.log('Astrology function invoked.');
 
-    // 1. Get Secret Keys from Environment Variables
     const CLIENT_ID = process.env.PROKERALA_CLIENT_ID;
     const CLIENT_SECRET = process.env.PROKERALA_CLIENT_SECRET;
 
     if (!CLIENT_ID || !CLIENT_SECRET) {
-        console.error('API credentials are not set in the environment.');
         return {
             statusCode: 500,
             body: JSON.stringify({ error: 'API credentials are not set up in the serverless environment.' })
@@ -78,62 +70,49 @@ exports.handler = async (event) => {
     }
 
     try {
-        let bodyData;
-        try {
-            bodyData = JSON.parse(event.body);
-        } catch (error) {
-            console.error("Malformed request body:", event.body);
-            return {
-                statusCode: 400, // Bad Request
-                body: JSON.stringify({ error: 'Invalid request body. It must be a valid JSON string.' })
-            };
-        }
-        
-        const { datetime, coordinates } = bodyData;
-        
+        const { datetime, coordinates } = JSON.parse(event.body);
         if (!datetime || !coordinates) {
              return {
                 statusCode: 400,
-                body: JSON.stringify({ error: 'Missing required fields in request body: datetime and coordinates.' })
+                body: JSON.stringify({ error: 'Missing required fields: datetime and coordinates.' })
             };
         }
 
-        // 2. Get a valid access token (from cache or new request)
         const accessToken = await getAccessToken(CLIENT_ID, CLIENT_SECRET);
         
-        // 3. Prepare API calls with the access token
-        const headers = {
-            'Authorization': `Bearer ${accessToken}`
-        };
+        const headers = { 'Authorization': `Bearer ${accessToken}` };
+        const params = new URLSearchParams({ datetime, coordinates, ayanamsa: 1 });
 
-        const params = new URLSearchParams({
-            datetime: datetime,
-            coordinates: coordinates,
-            ayanamsa: 1 // Lahiri Ayanamsa
-        });
-
-        // FIX: Changed endpoint to /kundli/advanced to fetch planetary positions
-        const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli/advanced?${params.toString()}`;
+        // OPTIMIZATION: Switched from /kundli/advanced to the basic /kundli endpoint.
+        const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${params.toString()}`;
         const dashaUrl = `https://api.prokerala.com/v2/astrology/dasha-periods?${params.toString()}`;
+        const planetPositionUrl = `https://api.prokerala.com/v2/astrology/natal-planet-position?${params.toString()}`;
 
-        console.log('Making GET API calls to ProKerala with access token...');
+        console.log('Making concurrent API calls to ProKerala...');
         
-        // 4. Make the secure, server-to-server API calls using GET
-        const [kundliResponse, dashaResponse] = await Promise.all([
-            fetch(kundliUrl, { method: 'GET', headers }),
-            fetch(dashaUrl, { method: 'GET', headers })
+        const [kundliResponse, dashaResponse, planetPositionResponse] = await Promise.all([
+            fetch(kundliUrl, { headers }),
+            fetch(dashaUrl, { headers }),
+            fetch(planetPositionUrl, { headers })
         ]);
 
-        console.log('ProKerala API responses received.');
         const kundliData = await kundliResponse.json();
         const dashaData = await dashaResponse.json();
+        const planetPositionData = await planetPositionResponse.json();
         
-        if (!kundliResponse.ok) throw new Error(kundliData.errors ? kundliData.errors[0].detail : 'Kundli API error.');
-        if (!dashaResponse.ok) throw new Error(dashaData.errors ? dashaData.errors[0].detail : 'Dasha API error.');
+        // Error handling for all API calls
+        if (!kundliResponse.ok) throw new Error(kundliData.errors?.[0]?.detail || 'Kundli API error.');
+        if (!dashaResponse.ok) throw new Error(dashaData.errors?.[0]?.detail || 'Dasha API error.');
+        if (!planetPositionResponse.ok) throw new Error(planetPositionData.errors?.[0]?.detail || 'Planet Position API error.');
+        
+        // Merge the critical data from the planet position response into the main kundliData object.
+        if (planetPositionData.data) {
+            kundliData.data.ascendant = planetPositionData.data.ascendant;
+            kundliData.data.planet_positions = planetPositionData.data.planets;
+        }
 
-        console.log('Successfully fetched data. Sending back to client.');
+        console.log('Successfully fetched and merged data. Sending back to client.');
         
-        // 5. Send the successful response back to the frontend
         return {
             statusCode: 200,
             body: JSON.stringify({ kundliData, dashaData })
