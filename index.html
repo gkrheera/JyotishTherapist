@@ -1,5 +1,5 @@
-<!-- JyotishTherapist Frontend v3.0.2 (Production Ready) -->
-<!-- Definitive fix for date encoding by manually constructing the query string. -->
+<!-- JyotishTherapist Frontend v3.0.3 (Production Ready) -->
+<!-- Final fix for date encoding by correctly encoding parameters before string construction. -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -539,8 +539,6 @@
                     return;
                 }
                 
-                const datetime = appState.birthDetails.datetimeLocal + ':00' + offset;
-
                 calculateBtn.disabled = true;
                 calculateBtn.innerHTML = '<div class="flex items-center justify-center gap-2"><div class="loader"></div><span>Generating...</span></div>';
                 
@@ -554,9 +552,12 @@
                 }
                 
                 try {
-                    // FIX: Manually and correctly construct the query string.
-                    const queryString = `datetime=${encodeURIComponent(datetime)}&coordinates=${encodeURIComponent(appState.coordinates)}&ayanamsa=1`;
+                    // DEFINITIVE FIX: Manually build the query string to preserve the '+' in the datetime.
+                    const datetimeWithSeconds = appState.birthDetails.datetimeLocal + ':00';
+                    const datetimeForApi = datetimeWithSeconds + offset;
                     
+                    const queryString = `datetime=${encodeURIComponent(datetimeForApi)}&coordinates=${encodeURIComponent(appState.coordinates)}&ayanamsa=1`;
+
                     const { kundliData, dashaData } = await fetchAstroData(queryString);
                     appState.kundliData = kundliData;
                     appState.dashaData = dashaData;
