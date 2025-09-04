@@ -1,126 +1,589 @@
-/**
- * JyotishTherapist Backend v3.0.1
- *
- * Adds console logging to help debug the exact request being sent to
- * the ProKerala API. This will give us visibility into what the API
- * is receiving from our function.
- */
+<!-- JyotishTherapist Frontend v3.0.2 (Production Ready) -->
+<!-- Definitive fix for date encoding by manually constructing the query string. -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JyotishTherapist - Vedic Chart & Insights</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+        }
+        .title-font { font-family: 'Playfair Display', serif; }
+        .card {
+            background-color: #1e293b;
+            border-radius: 0.75rem;
+            border: 1px solid #334155;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .form-input {
+             background-color: #334155;
+             border: 1px solid #475569; 
+             border-radius: 0.375rem; 
+             padding: 0.5rem 0.75rem;
+             color: #e2e8f0;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #fbbf24;
+            box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.4);
+        }
+        .btn-primary {
+            background-color: #fbbf24;
+            color: #1e293b;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.3s ease;
+        }
+        .btn-primary:hover:not(:disabled) { background-color: #f59e0b; }
+        .btn-primary:disabled { background-color: #475569; cursor: not-allowed; }
+        
+        /* Chart Styles */
+        .chart-container {
+            display: grid;
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 1 / 1;
+            border: 2px solid #fbbf24;
+            border-radius: 0.5rem;
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
+            background: rgba(30, 41, 59, 0.5);
+            position: relative;
+        }
+        .south-indian-chart { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); }
+        .north-indian-chart { display: block; border: none; }
+        .chart-box {
+            border: 1px solid #475569;
+            position: relative;
+            padding: 4px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 2px;
+            font-size: clamp(0.6rem, 2.5vw, 0.85rem);
+        }
+        .sign-name { position: absolute; top: 4px; left: 4px; font-weight: 600; color: #94a3b8; }
+        .planet { font-weight: 600; }
+        .ascendant-text { color: #f87171; font-weight: 700; }
+        #aries { grid-area: 1 / 1; } #taurus { grid-area: 1 / 2; } #gemini { grid-area: 1 / 3; } #cancer { grid-area: 1 / 4; }
+        #pisces { grid-area: 2 / 1; } #leo { grid-area: 2 / 4; }
+        #aquarius { grid-area: 3 / 1; } #virgo { grid-area: 3 / 4; }
+        #capricorn { grid-area: 4 / 1; } #sagittarius { grid-area: 4 / 2; } #scorpio { grid-area: 4 / 3; } #libra { grid-area: 4 / 4; }
+        .north-indian-chart svg { width: 100%; height: 100%; }
+        .north-indian-chart .chart-line { stroke: #475569; stroke-width: 2; }
+        .north-indian-chart .sign-number { font-size: clamp(1rem, 5vw, 1.5rem); fill: #94a3b8; font-weight: 600; }
+        .north-indian-chart .planet-text { font-size: clamp(0.7rem, 3vw, 1.1rem); font-weight: 600; }
+        
+        .toggle-btn { padding: 0.5rem 1rem; border: 1px solid #475569; background-color: transparent; color: #94a3b8; cursor: pointer; transition: all 0.2s ease-in-out; }
+        .toggle-btn.active { background-color: #fbbf24; color: #1e293b; border-color: #fbbf24; font-weight: 600; }
+        .toggle-btn:first-child { border-radius: 0.375rem 0 0 0.375rem; } .toggle-btn:last-child { border-radius: 0 0.375rem 0.375rem 0; }
+        
+        .hidden { display: none; }
+        .loader {
+            border: 4px solid #475569;
+            border-top: 4px solid #fbbf24;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-6 md:p-8">
+    <main class="w-full max-w-7xl mx-auto space-y-8">
+        <div class="text-center">
+            <h1 class="title-font text-4xl md:text-5xl font-bold text-amber-400">JyotishTherapist</h1>
+            <p class="text-slate-300 mt-2">Vedic Astrology Chart & AI-Powered Insights</p>
+        </div>
 
-// A simple in-memory cache for the access token to improve performance.
-let cachedToken = {
-    accessToken: null,
-    expiresAt: 0,
-};
+        <!-- Input Form -->
+        <div class="card p-6">
+            <h2 class="text-xl font-semibold mb-4 text-white">Enter Birth Details</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                    <label for="name" class="block text-sm font-medium text-slate-400 mb-1">Name</label>
+                    <input type="text" id="name" class="w-full form-input" value="Radha">
+                </div>
+                <div>
+                    <label for="datetime" class="block text-sm font-medium text-slate-400 mb-1">Date & Time</label>
+                    <input type="datetime-local" id="datetime" class="w-full form-input" value="1992-03-10T18:30">
+                </div>
+                <div>
+                    <label for="place" class="block text-sm font-medium text-slate-400 mb-1">Birth Place</label>
+                    <input type="text" id="place" class="w-full form-input" value="Vrindavan, India">
+                </div>
+                <div>
+                    <label for="offset" class="block text-sm font-medium text-slate-400 mb-1">Timezone Offset</label>
+                    <input type="text" id="offset" class="w-full form-input" value="+05:30" placeholder="e.g., +05:30">
+                </div>
+            </div>
+            <div class="mt-4">
+                 <p id="coords-display" class="text-xs text-slate-400 mt-1 h-4"></p>
+            </div>
+            <button id="calculateBtn" class="w-full btn-primary mt-4">
+                Generate Chart
+            </button>
+            <div id="error-display" class="text-red-400 text-sm mt-2 text-center h-auto p-4 bg-red-900/20 border border-red-500/30 rounded-lg hidden"></div>
+        </div>
+        
+        <!-- Results Section -->
+        <div id="results-section" class="hidden">
+            <div class="text-center mb-8">
+                <h2 class="title-font text-3xl md:text-4xl font-bold text-amber-400">Vedic Horoscope</h2>
+                <p class="text-xl md:text-2xl text-slate-300 mt-2">for <span id="chart-name" class="font-semibold text-white"></span></p>
+            </div>
 
-const TOKEN_URL = 'https://api.prokerala.com/token';
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Left Side: Chart -->
+                <div class="flex flex-col items-center">
+                     <div class="mb-4">
+                        <button id="southBtn" class="toggle-btn active">South Indian</button>
+                        <button id="northBtn" class="toggle-btn">North Indian</button>
+                    </div>
+                     <div class="chart-container south-indian-chart" id="south-kundli-chart"></div>
+                     <div class="chart-container north-indian-chart hidden" id="north-kundli-chart"></div>
+                     <div class="mt-4 text-center">
+                        <p class="text-sm text-slate-400">Rasi (Lagna) Chart</p>
+                        <p id="chart-style-label" class="text-xs text-slate-500">South Indian Style</p>
+                     </div>
+                </div>
 
-/**
- * Gets a valid OAuth 2.0 access token, using a cache to avoid unnecessary requests.
- * @param {string} clientId Your ProKerala Client ID.
- * @param {string} clientSecret Your ProKerala Client Secret.
- * @returns {Promise<string>} The access token.
- */
-async function getAccessToken(clientId, clientSecret) {
-    if (cachedToken.accessToken && cachedToken.expiresAt > Date.now() + 300 * 1000) {
-        return cachedToken.accessToken;
-    }
+                <!-- Right Side: Details -->
+                <div class="space-y-6">
+                    <div class="card p-6">
+                        <h2 class="title-font text-2xl font-bold text-amber-400 border-b border-slate-600 pb-3 mb-4">Core Identity</h2>
+                        <div id="core-identity" class="text-slate-300 space-y-2"></div>
+                    </div>
+                    
+                    <div class="card p-6">
+                        <h2 class="title-font text-2xl font-bold text-amber-400 border-b border-slate-600 pb-3 mb-4">Planetary Positions</h2>
+                        <div id="planetary-positions" class="text-slate-300 space-y-2 text-sm"></div>
+                    </div>
 
-    console.log('Requesting new access token...');
-    
-    const body = new URLSearchParams({
-        'grant_type': 'client_credentials',
-        'client_id': clientId,
-        'client_secret': clientSecret
-    });
+                    <div class="card p-6">
+                        <h2 class="title-font text-2xl font-bold text-amber-400 border-b border-slate-600 pb-3 mb-4">✨ AI Astrologer</h2>
+                        <div class="space-y-4">
+                            <p class="text-sm text-slate-400">Ask a question about this chart. For example: "What does this chart say about my career?"</p>
+                            <textarea id="ai-question-input" class="w-full bg-slate-800 border border-slate-600 rounded-md p-2 text-slate-300 focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition" placeholder="Your question here..."></textarea>
+                            <button id="get-insight-btn" class="w-full btn-primary">Get Insight</button>
+                            <div id="ai-response" class="text-slate-300 space-y-4 pt-4 border-t border-slate-600 hidden"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
 
-    const response = await fetch(TOKEN_URL, { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, 
-        body: body.toString() 
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-        console.error('Failed to get access token:', data);
-        throw new Error('Could not authenticate with ProKerala. Check API credentials.');
-    }
-    
-    cachedToken.accessToken = data.access_token;
-    cachedToken.expiresAt = Date.now() + data.expires_in * 1000;
-    
-    console.log('Successfully obtained and cached new access token.');
-    return data.access_token;
-}
-
-
-exports.handler = async (event) => {
-    console.log('Astrology function invoked.');
-
-    const CLIENT_ID = process.env.PROKERALA_CLIENT_ID;
-    const CLIENT_SECRET = process.env.PROKERALA_CLIENT_SECRET;
-
-    if (!CLIENT_ID || !CLIENT_SECRET) {
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: 'API credentials are not set up in the serverless environment.' })
-        };
-    }
-
-    try {
-        const queryString = event.rawQuery;
-        if (!queryString) {
-             return {
-                statusCode: 400,
-                body: JSON.stringify({ error: 'Missing required query parameters.' })
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- STATE MANAGEMENT ---
+            const appState = {
+                birthDetails: null,
+                kundliData: null,
+                dashaData: null,
+                coordinates: null,
+                chartData: {
+                    ascendant: '',
+                    planets: {}
+                }
             };
-        }
+            const svgns = "http://www.w3.org/2000/svg";
 
-        const accessToken = await getAccessToken(CLIENT_ID, CLIENT_SECRET);
-        
-        const headers = { 'Authorization': `Bearer ${accessToken}` };
-        
-        const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${queryString}`;
-        const dashaUrl = `https://api.prokerala.com/v2/astrology/dasha-periods?${queryString}`;
-        const planetPositionUrl = `https://api.prokerala.com/v2/astrology/natal-planet-position?${queryString}`;
+            // --- DOM ELEMENTS ---
+            const calculateBtn = document.getElementById('calculateBtn');
+            const errorDisplay = document.getElementById('error-display');
+            const placeInput = document.getElementById('place');
+            const coordsDisplay = document.getElementById('coords-display');
+            const resultsSection = document.getElementById('results-section');
+            const southChartContainer = document.getElementById('south-kundli-chart');
+            const northChartContainer = document.getElementById('north-kundli-chart');
+            const southBtn = document.getElementById('southBtn');
+            const northBtn = document.getElementById('northBtn');
+            const chartStyleLabel = document.getElementById('chart-style-label');
+            const getInsightBtn = document.getElementById('get-insight-btn');
+            const aiQuestionInput = document.getElementById('ai-question-input');
+            const aiResponseEl = document.getElementById('ai-response');
+            
+            // --- API FUNCTIONS ---
+            function showError(message) {
+                errorDisplay.innerHTML = message;
+                errorDisplay.classList.remove('hidden');
+            }
 
-        // DEBUG: Log the exact URLs being sent to the API
-        console.log('Forwarding to Kundli URL:', kundliUrl);
-        console.log('Forwarding to Dasha URL:', dashaUrl);
-        console.log('Forwarding to Planet Position URL:', planetPositionUrl);
-        
-        const [kundliResponse, dashaResponse, planetPositionResponse] = await Promise.all([
-            fetch(kundliUrl, { headers }),
-            fetch(dashaUrl, { headers }),
-            fetch(planetPositionUrl, { headers })
-        ]);
+            function clearError() {
+                errorDisplay.textContent = '';
+                errorDisplay.classList.add('hidden');
+            }
 
-        const kundliData = await kundliResponse.json();
-        const dashaData = await dashaResponse.json();
-        const planetPositionData = await planetPositionResponse.json();
-        
-        if (!kundliResponse.ok) throw new Error(kundliData.errors?.[0]?.detail || 'Kundli API error.');
-        if (!dashaResponse.ok) throw new Error(dashaData.errors?.[0]?.detail || 'Dasha API error.');
-        if (!planetPositionResponse.ok) throw new Error(planetPositionData.errors?.[0]?.detail || 'Planet Position API error.');
-        
-        if (planetPositionData.data) {
-            kundliData.data.ascendant = planetPositionData.data.ascendant;
-            kundliData.data.planet_positions = planetPositionData.data.planets;
-        }
+            async function getCoordinates(placeName) {
+                if (!placeName) {
+                    coordsDisplay.textContent = '';
+                    return null;
+                }
+                coordsDisplay.textContent = 'Searching for coordinates...';
+                clearError();
+                
+                try {
+                    const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(placeName)}&format=json&limit=1`);
+                    if (!response.ok) throw new Error('Network error during geocoding.');
+                    
+                    const data = await response.json();
+                    if (data && data.length > 0) {
+                        const { lat, lon } = data[0];
+                        const coords = `${parseFloat(lat).toFixed(4)},${parseFloat(lon).toFixed(4)}`;
+                        coordsDisplay.textContent = `Found: ${coords}`;
+                        return coords;
+                    } else {
+                        throw new Error(`Place "${placeName}" not found.`);
+                    }
+                } catch (error) {
+                    coordsDisplay.textContent = 'Could not find location.';
+                    console.error("Geocoding Error:", error.message);
+                    return null;
+                }
+            }
+            
+            async function fetchAstroData(queryString) {
+                try {
+                    const response = await fetch(`/api/astrology?${queryString}`);
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.error || 'An unknown error occurred in the serverless function.');
+                    }
+                    return data;
+                } catch (error) {
+                    showError(`<strong>Error:</strong> ${error.message}`);
+                    throw error;
+                }
+            }
 
-        console.log('Successfully fetched and merged data. Sending back to client.');
-        
-        return {
-            statusCode: 200,
-            body: JSON.stringify({ kundliData, dashaData })
-        };
+            async function getAstrologicalInsight(question) {
+                if (!appState.chartData.ascendant) {
+                    aiResponseEl.innerHTML = `<p class="text-red-400">Please generate a chart first.</p>`;
+                    aiResponseEl.classList.remove('hidden');
+                    return;
+                }
+                
+                getInsightBtn.disabled = true;
+                aiResponseEl.innerHTML = '<div class="flex items-center justify-center gap-2"><div class="loader"></div><span>Generating insight...</span></div>';
+                aiResponseEl.classList.remove('hidden');
+                
+                const apiKey = ""; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
-    } catch (error) {
-        console.error('Serverless Function Error:', error.message);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: error.message })
-        };
-    }
-};
+                const systemPrompt = "You are an expert Vedic astrologer (Jyotishi). Analyze the provided birth chart data and answer the user's question based on the principles of Vedic astrology. Provide a clear, insightful, and easy-to-understand response. Do not use markdown formatting.";
+
+                const chartDetails = `The native has a ${appState.chartData.ascendant} Ascendant. The planetary positions are as follows: ${JSON.stringify(appState.chartData.planets)}.`;
+                const userQuery = `Based on this Vedic chart (${chartDetails}), please answer the following question: "${question}"`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                };
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error(`API error: ${response.statusText}`);
+                    
+                    const result = await response.json();
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    
+                    if (text) {
+                        aiResponseEl.innerHTML = `<p>${text.replace(/\n/g, '<br>')}</p>`;
+                    } else {
+                        throw new Error("No content received from AI.");
+                    }
+                } catch (error) {
+                    console.error("Error fetching AI insight:", error);
+                    aiResponseEl.innerHTML = `<p class="text-red-400">Sorry, I couldn't retrieve an insight at this time. Please try again later.</p>`;
+                } finally {
+                    getInsightBtn.disabled = false;
+                }
+            }
+            
+            // --- CHART RENDERING ---
+            const signData = {
+                south: [ { id: 'aries', name: 'Ar' }, { id: 'taurus', name: 'Ta' }, { id: 'gemini', name: 'Ge' }, { id: 'cancer', name: 'Cn' }, { id: 'leo', name: 'Le' }, { id: 'virgo', name: 'Vi' }, { id: 'libra', name: 'Li' }, { id: 'scorpio', name: 'Sc' }, { id: 'sagittarius', name: 'Sg' }, { id: 'capricorn', name: 'Cp' }, { id: 'aquarius', name: 'Aq' }, { id: 'pisces', name: 'Pi' }],
+                names: ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'],
+                short: { 'Sun': 'Su', 'Moon': 'Mo', 'Mars': 'Ma', 'Mercury': 'Me', 'Jupiter': 'Ju', 'Venus': 'Ve', 'Saturn': 'Sa', 'Rahu': 'Ra', 'Ketu': 'Ke' }
+            };
+            const signNumbers = Object.fromEntries(signData.names.map((name, i) => [name, i + 1]));
+
+            function renderSouthIndianChart() {
+                southChartContainer.innerHTML = '';
+                const signMap = {};
+                signData.south.forEach(sign => {
+                    const box = document.createElement('div');
+                    box.className = 'chart-box';
+                    box.id = sign.id;
+                    const signNameEl = document.createElement('span');
+                    signNameEl.className = 'sign-name';
+                    signNameEl.textContent = sign.name;
+                    box.appendChild(signNameEl);
+                    southChartContainer.appendChild(box);
+                    signMap[sign.id.charAt(0).toUpperCase() + sign.id.slice(1)] = box;
+                });
+
+                const ascendantBox = signMap[appState.chartData.ascendant];
+                if (ascendantBox) {
+                    const ascendantEl = createPlanetEl('As');
+                    ascendantBox.appendChild(ascendantEl);
+                }
+
+                for (const [planet, sign] of Object.entries(appState.chartData.planets)) {
+                    const planetBox = signMap[sign];
+                    if (planetBox) {
+                        const planetEl = createPlanetEl(planet);
+                        planetBox.appendChild(planetEl);
+                    }
+                }
+            }
+
+            function renderNorthIndianChart() {
+                northChartContainer.innerHTML = '';
+                const svg = document.createElementNS(svgns, "svg");
+                svg.setAttribute("viewBox", "0 0 500 500");
+
+                const lines = [
+                    [0,0, 500,0], [500,0, 500,500], [500,500, 0,500], [0,500, 0,0],
+                    [0, 0, 500, 500], [500, 0, 0, 500], [250, 0, 500, 250], [500, 250, 250, 500],
+                    [250, 500, 0, 250], [0, 250, 250, 0]
+                ];
+                lines.forEach(l => {
+                    const line = document.createElementNS(svgns, 'line');
+                    line.setAttribute('x1', l[0]); line.setAttribute('y1', l[1]);
+                    line.setAttribute('x2', l[2]); line.setAttribute('y2', l[3]);
+                    line.setAttribute('class', 'chart-line');
+                    svg.appendChild(line);
+                });
+                
+                const housePositions = [
+                    { x: 250, y: 125 }, { x: 42,  y: 125 }, { x: 42,  y: 375 }, { x: 125, y: 250 },
+                    { x: 125, y: 458 }, { x: 375, y: 458 }, { x: 250, y: 375 }, { x: 458, y: 375 },
+                    { x: 458, y: 125 }, { x: 375, y: 250 }, { x: 375, y: 42  }, { x: 125, y: 42  }
+                ];
+
+                const planetsBySign = {};
+                for (const [planet, sign] of Object.entries(appState.chartData.planets)) {
+                    if (!planetsBySign[sign]) planetsBySign[sign] = [];
+                    planetsBySign[sign].push(planet);
+                }
+                const ascendantSignNumber = signNumbers[appState.chartData.ascendant];
+
+                for (let houseIndex = 0; houseIndex < 12; houseIndex++) {
+                    const coords = housePositions[houseIndex];
+                    const signIndex = (ascendantSignNumber - 1 + houseIndex) % 12;
+                    const signName = signData.names[signIndex];
+                    const signNum = signNumbers[signName];
+                    
+                    let planetsInHouse = planetsBySign[signName] || [];
+                    if (houseIndex === 0) {
+                        planetsInHouse = ['As', ...planetsInHouse];
+                    }
+
+                    const group = document.createElementNS(svgns, 'g');
+                    group.setAttribute('transform', `translate(${coords.x}, ${coords.y})`);
+
+                    const signEl = createSvgTextEl(signNum, 0, 0, 'sign');
+                    group.appendChild(signEl);
+
+                    const planetCount = planetsInHouse.length;
+                    if (planetCount > 0) {
+                        const radius = 22 + (planetCount * 2.5);
+                        const startAngle = -90;
+                        const angleStep = 360 / planetCount;
+                        
+                        planetsInHouse.forEach((planet, index) => {
+                            let angle = startAngle + (index * angleStep);
+                            const angleRad = angle * (Math.PI / 180);
+                            const planetX = radius * Math.cos(angleRad);
+                            const planetY = radius * Math.sin(angleRad);
+                            
+                            const planetEl = createSvgTextEl(planet, planetX, planetY, 'planet');
+                            group.appendChild(planetEl);
+                        });
+                    }
+                    svg.appendChild(group);
+                }
+                northChartContainer.appendChild(svg);
+            }
+
+            function createPlanetEl(planet) {
+                const planetEl = document.createElement('div');
+                planetEl.className = 'planet';
+                if (planet === 'As') planetEl.classList.add('ascendant-text');
+                let planetColor = '#fbbf24';
+                if (['Ra', 'Ke'].includes(planet)) planetColor = '#94a3b8';
+                else if (planet === 'Sa') planetColor = '#60a5fa';
+                else if (planet === 'Ma') planetColor = '#f87171';
+                planetEl.style.color = planetColor;
+                planetEl.textContent = planet;
+                return planetEl;
+            }
+
+            function createSvgTextEl(text, x, y, type) {
+                const textEl = document.createElementNS(svgns, 'text');
+                textEl.setAttribute('x', x); textEl.setAttribute('y', y);
+                textEl.setAttribute('text-anchor', 'middle');
+                textEl.setAttribute('dominant-baseline', 'central');
+                textEl.textContent = text;
+                if (type === 'sign') {
+                    textEl.setAttribute('class', 'sign-number');
+                } else {
+                    textEl.setAttribute('class', 'planet-text');
+                    if (text === 'As') textEl.classList.add('ascendant-text');
+                    let planetColor = '#fbbf24';
+                    if (['Ra', 'Ke'].includes(text)) planetColor = '#94a3b8';
+                    else if (text === 'Sa') planetColor = '#60a5fa';
+                    else if (text === 'Ma') planetColor = '#f87171';
+                    textEl.setAttribute('fill', planetColor);
+                }
+                return textEl;
+            }
+
+            // --- UI UPDATE FUNCTIONS ---
+            function updateUI() {
+                document.getElementById('chart-name').textContent = appState.birthDetails.name;
+                
+                const { ascendant, planet_positions: planets, nakshatra_details } = appState.kundliData.data;
+
+                if (!planets || !Array.isArray(planets) || !nakshatra_details || !ascendant) {
+                    console.error("Required data (ascendant, planets, or nakshatra_details) is missing in the API response:", appState.kundliData.data);
+                    showError("Could not retrieve complete astrological data from the API. The chart cannot be generated.");
+                    return;
+                }
+
+                const moonSign = nakshatra_details.chandra_rasi.name;
+                const sunSign = nakshatra_details.soorya_rasi.name;
+                const dashaPeriods = appState.dashaData.data.dasha_periods;
+                const today = new Date();
+                const currentDasha = dashaPeriods.find(d => new Date(d.start_date) <= today && new Date(d.end_date) >= today);
+                
+                document.getElementById('core-identity').innerHTML = `
+                    <p><strong class="font-semibold text-slate-200 w-32 inline-block">Ascendant:</strong> ${ascendant}</p>
+                    <p><strong class="font-semibold text-slate-200 w-32 inline-block">Moon Sign (Vedic):</strong> ${moonSign}</p>
+                    <p><strong class="font-semibold text-slate-200 w-32 inline-block">Sun Sign (Vedic):</strong> ${sunSign}</p>
+                    <p><strong class="font-semibold text-slate-200 w-32 inline-block">Current Dasha:</strong> ${currentDasha ? currentDasha.name : 'N/A'}</p>
+                `;
+
+                let planetHTML = '<ul class="space-y-1">';
+                planets.forEach(p => {
+                    planetHTML += `<li><strong class="font-semibold text-slate-200 w-20 inline-block">${p.name}:</strong> ${p.sign} (House ${p.house})</li>`;
+                });
+                planetHTML += '</ul>';
+                document.getElementById('planetary-positions').innerHTML = planetHTML;
+                
+                appState.chartData.ascendant = ascendant;
+                appState.chartData.planets = {};
+                planets.forEach(p => {
+                    appState.chartData.planets[signData.short[p.name]] = p.sign;
+                });
+                
+                renderSouthIndianChart();
+                renderNorthIndianChart();
+                resultsSection.classList.remove('hidden');
+            }
+            
+            function setChartStyle(style) {
+                if (style === 'south') {
+                    southChartContainer.classList.remove('hidden');
+                    northChartContainer.classList.add('hidden');
+                    southBtn.classList.add('active');
+                    northBtn.classList.remove('active');
+                    chartStyleLabel.textContent = 'South Indian Style';
+                } else {
+                    northChartContainer.classList.remove('hidden');
+                    southChartContainer.classList.add('hidden');
+                    northBtn.classList.add('active');
+                    southBtn.classList.remove('active');
+                    chartStyleLabel.textContent = 'North Indian Style';
+                }
+            }
+            
+            // --- EVENT LISTENERS & INITIALIZATION ---
+            placeInput.addEventListener('change', () => getCoordinates(placeInput.value));
+
+            calculateBtn.addEventListener('click', async () => {
+                clearError();
+                
+                appState.birthDetails = {
+                    name: document.getElementById('name').value,
+                    datetimeLocal: document.getElementById('datetime').value,
+                    place: placeInput.value,
+                    offset: document.getElementById('offset').value,
+                };
+
+                let offset = appState.birthDetails.offset.trim();
+                if (offset && !offset.startsWith('+') && !offset.startsWith('-')) {
+                    offset = '+' + offset;
+                }
+
+                if (!appState.birthDetails.datetimeLocal || !appState.birthDetails.place || !offset || !appState.birthDetails.name) {
+                    showError('All fields, including a valid timezone offset, are required.');
+                    return;
+                }
+                
+                const datetime = appState.birthDetails.datetimeLocal + ':00' + offset;
+
+                calculateBtn.disabled = true;
+                calculateBtn.innerHTML = '<div class="flex items-center justify-center gap-2"><div class="loader"></div><span>Generating...</span></div>';
+                
+                appState.coordinates = await getCoordinates(appState.birthDetails.place);
+                
+                if (!appState.coordinates) {
+                    showError('Could not find coordinates. Please enter a more specific place name.');
+                    calculateBtn.disabled = false;
+                    calculateBtn.textContent = 'Generate Chart';
+                    return;
+                }
+                
+                try {
+                    // FIX: Manually and correctly construct the query string.
+                    const queryString = `datetime=${encodeURIComponent(datetime)}&coordinates=${encodeURIComponent(appState.coordinates)}&ayanamsa=1`;
+                    
+                    const { kundliData, dashaData } = await fetchAstroData(queryString);
+                    appState.kundliData = kundliData;
+                    appState.dashaData = dashaData;
+                    updateUI();
+                } catch (error) {
+                    console.error('Failed to process astrological data:', error);
+                } finally {
+                    calculateBtn.disabled = false;
+                    calculateBtn.textContent = 'Generate Chart';
+                }
+            });
+
+            southBtn.addEventListener('click', () => setChartStyle('south'));
+            northBtn.addEventListener('click', () => setChartStyle('north'));
+            
+            getInsightBtn.addEventListener('click', () => {
+                const question = aiQuestionInput.value.trim();
+                if (question) {
+                    getAstrologicalInsight(question);
+                } else {
+                    aiQuestionInput.placeholder = "Please enter a question first!";
+                }
+            });
+
+            getCoordinates(placeInput.value);
+        });
+    </script>
+</body>
+</html>
 
