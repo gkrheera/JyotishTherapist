@@ -1,5 +1,5 @@
-<!-- JyotishTherapist Frontend v3.0.0 (Production Ready) -->
-<!-- Implements URL query parameter passing for robust proxying. -->
+<!-- JyotishTherapist Frontend v3.0.1 (Production Ready) -->
+<!-- Fixes query string creation to prevent date truncation. -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -257,7 +257,6 @@
             
             async function fetchAstroData(queryString) {
                 try {
-                    // FIX: Use GET and pass data via query string. No JSON body.
                     const response = await fetch(`/api/astrology?${queryString}`);
                     const data = await response.json();
                     if (!response.ok) {
@@ -555,13 +554,10 @@
                 }
                 
                 try {
-                    // FIX: Create the query string to send to the serverless function.
-                    const params = new URLSearchParams({
-                        datetime: datetime,
-                        coordinates: appState.coordinates,
-                        ayanamsa: 1
-                    });
-                    const { kundliData, dashaData } = await fetchAstroData(params.toString());
+                    // FIX: Manually and correctly construct the query string.
+                    const queryString = `datetime=${encodeURIComponent(datetime)}&coordinates=${encodeURIComponent(appState.coordinates)}&ayanamsa=1`;
+                    
+                    const { kundliData, dashaData } = await fetchAstroData(queryString);
                     appState.kundliData = kundliData;
                     appState.dashaData = dashaData;
                     updateUI();
