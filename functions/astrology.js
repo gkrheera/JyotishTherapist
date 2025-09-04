@@ -1,16 +1,28 @@
+// JyotishTherapist Backend v2.0.0
 // This is your secure backend function.
 // It runs in the cloud, not in the browser.
 
-// Netlify's modern environment includes a global fetch, so 'node-fetch' is not needed.
 const TOKEN_URL = 'https://api.prokerala.com/token';
+
+// --- In-memory cache for the access token ---
+// This will persist across invocations of the same function instance (i.e., "warm" functions)
+let cachedToken = null;
+let tokenExpiry = 0;
 
 /**
  * Gets a valid OAuth 2.0 access token from the ProKerala token endpoint.
+ * Implements in-memory caching to reduce redundant authentication calls.
  * @param {string} clientId Your ProKerala Client ID.
  * @param {string} clientSecret Your ProKerala Client Secret.
  * @returns {Promise<string>} The access token.
  */
 async function getAccessToken(clientId, clientSecret) {
+    // Return cached token if it's still valid
+    if (cachedToken && tokenExpiry > Date.now()) {
+        console.log('Returning cached access token...');
+        return cachedToken;
+    }
+
     console.log('Requesting new access token...');
     
     const body = new URLSearchParams({
@@ -33,15 +45,24 @@ async function getAccessToken(clientId, clientSecret) {
 
     if (!response.ok) {
         console.error('Failed to get access token:', data);
+        // Clear cache on failure
+        cachedToken = null;
+        tokenExpiry = 0;
         throw new Error('Could not authenticate with ProKerala. Please check your API credentials in the Netlify environment variables.');
     }
     
-    console.log('Successfully obtained access token.');
+    console.log('Successfully obtained new access token.');
+    
+    // Cache the new token and set its expiry time
+    cachedToken = data.access_token;
+    // Set expiry to 5 minutes before the actual token expiration for a safety buffer
+    tokenExpiry = Date.now() + (data.expires_in - 300) * 1000;
+
     return data.access_token;
 }
 
 
-exports.handler = async (event, context) => {
+exports.handler = async (event) => {
     console.log('Astrology function invoked.');
 
     // 1. Get Secret Keys from Environment Variables
@@ -77,10 +98,10 @@ exports.handler = async (event, context) => {
             };
         }
 
-        // 2. Get a valid access token
+        // 2. Get a valid access token (from cache or new request)
         const accessToken = await getAccessToken(CLIENT_ID, CLIENT_SECRET);
         
-        // 3. Prepare API calls with the new access token
+        // 3. Prepare API calls with the access token
         const headers = {
             'Authorization': `Bearer ${accessToken}`
         };
@@ -91,13 +112,10 @@ exports.handler = async (event, context) => {
             ayanamsa: 1 // Lahiri Ayanamsa
         });
 
-        // --- FINAL FIX: All data endpoints must use the /v2/ prefix, as confirmed by SDK ---
         const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${params.toString()}`;
         const dashaUrl = `https://api.prokerala.com/v2/astrology/dasha-periods?${params.toString()}`;
 
         console.log('Making GET API calls to ProKerala with access token...');
-        console.log('Kundli URL:', kundliUrl);
-        console.log('Dasha URL:', dashaUrl);
         
         // 4. Make the secure, server-to-server API calls using GET
         const [kundliResponse, dashaResponse] = await Promise.all([
