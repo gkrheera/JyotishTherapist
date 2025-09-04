@@ -1,9 +1,10 @@
 /**
- * JyotishTherapist Backend v2.0.4
+ * JyotishTherapist Backend v3.0.0
  *
- * This version fixes the ISO 8601 date format error by replacing
- * URLSearchParams with manual encodeURIComponent to ensure correct
- * encoding of the '+' character in the timezone offset.
+ * This version implements the robust proxy logic ported from the
+ * official ProKerala Cloudflare Worker example. It no longer parses
+ * the request body and instead forwards the query string directly,
+ * which is the definitive fix for the date encoding error.
  */
 
 // A simple in-memory cache for the access token to improve performance.
@@ -21,6 +22,7 @@ const TOKEN_URL = 'https://api.prokerala.com/token';
  * @returns {Promise<string>} The access token.
  */
 async function getAccessToken(clientId, clientSecret) {
+    // Return cached token if it's still valid for at least 5 more minutes.
     if (cachedToken.accessToken && cachedToken.expiresAt > Date.now() + 300 * 1000) {
         return cachedToken.accessToken;
     }
@@ -47,11 +49,13 @@ async function getAccessToken(clientId, clientSecret) {
     }
     
     cachedToken.accessToken = data.access_token;
+    // expires_in is in seconds, convert to milliseconds for Date.now() comparison.
     cachedToken.expiresAt = Date.now() + data.expires_in * 1000;
     
     console.log('Successfully obtained and cached new access token.');
     return data.access_token;
 }
+
 
 exports.handler = async (event) => {
     console.log('Astrology function invoked.');
@@ -67,11 +71,13 @@ exports.handler = async (event) => {
     }
 
     try {
-        const { datetime, coordinates } = JSON.parse(event.body);
-        if (!datetime || !coordinates) {
+        // FIX: Instead of parsing a body, get the raw query string from the event.
+        // This is the core of the proxy logic.
+        const queryString = event.rawQuery;
+        if (!queryString) {
              return {
                 statusCode: 400,
-                body: JSON.stringify({ error: 'Missing required fields: datetime and coordinates.' })
+                body: JSON.stringify({ error: 'Missing required query parameters.' })
             };
         }
 
@@ -79,15 +85,12 @@ exports.handler = async (event) => {
         
         const headers = { 'Authorization': `Bearer ${accessToken}` };
         
-        // FIX: Manually build the query string using encodeURIComponent to ensure
-        // the '+' in the timezone offset is correctly encoded.
-        const queryString = `datetime=${encodeURIComponent(datetime)}&coordinates=${encodeURIComponent(coordinates)}&ayanamsa=1`;
-
+        // FIX: Append the client's query string directly to the API endpoints.
         const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${queryString}`;
         const dashaUrl = `https://api.prokerala.com/v2/astrology/dasha-periods?${queryString}`;
         const planetPositionUrl = `https://api.prokerala.com/v2/astrology/natal-planet-position?${queryString}`;
 
-        console.log('Making concurrent API calls to ProKerala...');
+        console.log('Making concurrent API calls to ProKerala as a proxy...');
         
         const [kundliResponse, dashaResponse, planetPositionResponse] = await Promise.all([
             fetch(kundliUrl, { headers }),
@@ -103,6 +106,7 @@ exports.handler = async (event) => {
         if (!dashaResponse.ok) throw new Error(dashaData.errors?.[0]?.detail || 'Dasha API error.');
         if (!planetPositionResponse.ok) throw new Error(planetPositionData.errors?.[0]?.detail || 'Planet Position API error.');
         
+        // Merge the planet position data into the main kundli response for the frontend.
         if (planetPositionData.data) {
             kundliData.data.ascendant = planetPositionData.data.ascendant;
             kundliData.data.planet_positions = planetPositionData.data.planets;
