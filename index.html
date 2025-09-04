@@ -1,4 +1,4 @@
-<!-- JyotishTherapist Frontend v2.1.1 (Preview Mode with Date Fix) -->
+<!-- JyotishTherapist Frontend v2.1.1 (Production Ready) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -186,83 +186,6 @@
     </main>
 
     <script>
-        // --- PREVIEW MODE MOCK API ---
-        const originalFetch = window.fetch;
-        window.fetch = function(url, options) {
-            console.log(`Intercepted fetch call to: ${url}`);
-            
-            if (url.toString().startsWith('https://nominatim.openstreetmap.org')) {
-                console.log('Returning mock geocoding data.');
-                return Promise.resolve({
-                    ok: true,
-                    json: () => Promise.resolve([{ lat: '27.5667', lon: '77.7000' }]), 
-                });
-            }
-
-            if (url.toString().includes('/api/astrology')) {
-                 console.log('Returning mock astrological data.');
-                 const mockKundliData = {
-                    "data": {
-                        "ascendant": "Leo",
-                        "nakshatra_details": {
-                            "chandra_rasi": { "name": "Aquarius" },
-                            "soorya_rasi": { "name": "Pisces" }
-                        },
-                        "planet_positions": [
-                            {"name": "Sun", "sign": "Pisces", "house": 8},
-                            {"name": "Moon", "sign": "Aquarius", "house": 7},
-                            {"name": "Mars", "sign": "Taurus", "house": 10},
-                            {"name": "Mercury", "sign": "Pisces", "house": 8},
-                            {"name": "Jupiter", "sign": "Leo", "house": 1},
-                            {"name": "Venus", "sign": "Aries", "house": 9},
-                            {"name": "Saturn", "sign": "Aquarius", "house": 7},
-                            {"name": "Rahu", "sign": "Scorpio", "house": 4},
-                            {"name": "Ketu", "sign": "Taurus", "house": 10}
-                        ]
-                    }
-                };
-                const mockDashaData = {
-                     "data": {
-                        "dasha_periods": [
-                            {"name": "Ketu", "start_date": "1992-03-10", "end_date": "1998-05-12"},
-                            {"name": "Venus", "start_date": "1998-05-12", "end_date": "2018-05-12"},
-                            {"name": "Sun", "start_date": "2018-05-12", "end_date": "2024-05-11"},
-                            {"name": "Moon", "start_date": "2024-05-11", "end_date": "2034-05-12"}
-                        ]
-                    }
-                };
-                return new Promise(resolve => {
-                    setTimeout(() => {
-                        resolve({
-                            ok: true,
-                            json: () => Promise.resolve({ kundliData: mockKundliData, dashaData: mockDashaData }),
-                        });
-                    }, 1000);
-                });
-            }
-            
-            if (url.toString().startsWith('https://generativelanguage.googleapis.com')) {
-                console.log('Returning mock AI insight.');
-                const mockInsight = {
-                    "candidates": [{
-                        "content": {
-                            "parts": [{ "text": "This is a mock AI response for preview purposes. Based on the Leo ascendant and strong placements in the 7th and 10th houses, this chart suggests a powerful presence in partnerships and career. The current Sun dasha indicates a period of heightened focus on self-identity, leadership, and public life." }]
-                        }
-                    }]
-                };
-                 return new Promise(resolve => {
-                    setTimeout(() => {
-                        resolve({
-                            ok: true,
-                            json: () => Promise.resolve(mockInsight),
-                        });
-                    }, 1500);
-                });
-            }
-
-            return originalFetch(url, options);
-        };
-
         document.addEventListener('DOMContentLoaded', function() {
             // --- STATE MANAGEMENT ---
             const appState = {
