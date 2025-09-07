@@ -1,5 +1,5 @@
-<!-- JyotishTherapist Frontend v3.1.6 (Production Ready) -->
-<!-- Final Fix: Reverting to standard URLSearchParams and letting the simplified backend handle the query string. -->
+<!-- JyotishTherapist Frontend v3.1.7 (Production Ready) -->
+<!-- Reverted to standard URLSearchParams. The backend will handle the Netlify decoding issue. -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -564,7 +564,6 @@
                     const datetimeForApi = datetimeWithSeconds + offset;
                     
                     // **THE FIX: Use standard URLSearchParams. This correctly encodes '+' to '%2B'.**
-                    // The backend will now handle Netlify's incorrect decoding of this value.
                     const params = new URLSearchParams({
                         datetime: datetimeForApi,
                         coordinates: appState.coordinates,
