@@ -1,12 +1,10 @@
 /**
- * JyotishTherapist Backend v4.0.9 (Production Ready)
+ * JyotishTherapist Backend v5.1.0 (Production Ready)
  *
- * Final Fix: Reverted to the logic that corrects for Netlify's specific
- * misinterpretation of the plus sign.
- * The frontend sends a standard, browser-encoded URL. The browser correctly
- * turns '+' into '%2B'. Netlify incorrectly turns '%2B' into a space.
- * This function reverses that one incorrect transformation before passing the
- * request to the ProKerala API.
+ * Final Fix: This version implements the simplest possible logic based on Netlify
+ * function logs. It passes the event.rawQuery directly to the ProKerala API
+ * without any parsing or modification. This avoids all issues with Netlify's
+ * intermediate decoding steps.
  */
 
 // A simple in-memory cache for the access token to improve performance.
@@ -70,40 +68,24 @@ exports.handler = async (event) => {
     }
 
     try {
-        if (!event.rawQuery) {
+        const queryString = event.rawQuery;
+        if (!queryString) {
              return {
                 statusCode: 400,
                 body: JSON.stringify({ error: 'Missing required query parameters.' })
             };
         }
 
-        // **THE FIX: Correct for Netlify's misinterpretation of the '+' character.**
-        const params = new URLSearchParams(event.rawQuery);
-        const datetime = params.get('datetime');
-        
-        if (!datetime) {
-            return {
-                statusCode: 400,
-                body: JSON.stringify({ error: 'Datetime parameter is missing.' })
-            };
-        }
-        
-        // Netlify incorrectly decodes '%2B' to a space. We change it back to a '+'.
-        const correctedDatetime = datetime.replace(' ', '+');
-        
-        // Rebuild the query string with the corrected datetime.
-        const finalParams = new URLSearchParams(params.toString());
-        finalParams.set('datetime', correctedDatetime);
-        const finalQueryString = finalParams.toString();
-        
         const accessToken = await getAccessToken(CLIENT_ID, CLIENT_SECRET);
         const headers = { 'Authorization': `Bearer ${accessToken}` };
         
-        const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${finalQueryString}`;
-        const dashaUrl = `https://api.prokerala.com/v2/astrology/dasha-periods?${finalQueryString}`;
-        const planetPositionUrl = `https://api.prokerala.com/v2/astrology/natal-planet-position?${finalQueryString}`;
+        // **THE DEFINITIVE FIX: Pass the raw query string directly through.**
+        // We will not parse, modify, or re-encode the query string.
+        const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${queryString}`;
+        const dashaUrl = `https://api.prokerala.com/v2/astrology/dasha-periods?${queryString}`;
+        const planetPositionUrl = `https://api.prokerala.com/v2/astrology/natal-planet-position?${queryString}`;
         
-        console.log('Calling URLs:', { kundliUrl, dashaUrl, planetPositionUrl });
+        console.log('Calling Passthrough URLs:', { kundliUrl, dashaUrl, planetPositionUrl });
 
         const [kundliResponse, dashaResponse, planetPositionResponse] = await Promise.all([
             fetch(kundliUrl, { headers }),
