@@ -1,9 +1,10 @@
 /**
- * JyotishTherapist Backend v4.0.4 (Production Ready)
+ * JyotishTherapist Backend v4.0.5 (Production Ready)
  *
- * This version correctly handles URL encoding by replacing the encoded plus sign (%2B)
- * that survives Netlify's automatic decoding with a literal '+' before calling the
- * ProKerala API. This is the definitive fix for the date parsing issue.
+ * This version passes the query string directly to the ProKerala API without
+ * any decoding or replacement. The frontend is now responsible for preparing
+ * the string in the exact format required by the API, including the URL-encoded
+ * plus sign ('%2B') for the timezone offset.
  */
 
 // A simple in-memory cache for the access token to improve performance.
@@ -78,14 +79,13 @@ exports.handler = async (event) => {
         const accessToken = await getAccessToken(CLIENT_ID, CLIENT_SECRET);
         const headers = { 'Authorization': `Bearer ${accessToken}` };
         
-        // **THE FIX: Replace the surviving '%2B' with a '+'**
-        // Netlify's proxy turns the double-encoded '%252B' from the client into '%2B'.
-        // We now replace that with a literal '+' to create a valid ISO 8601 string.
-        const correctedQueryString = queryString.replace(/%2B/g, '+');
-
-        const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${correctedQueryString}`;
-        const dashaUrl = `https://api.prokerala.com/v2/astrology/dasha-periods?${correctedQueryString}`;
-        const planetPositionUrl = `https://api.prokerala.com/v2/astrology/natal-planet-position?${correctedQueryString}`;
+        // **THE FIX: Pass the raw query string directly through.**
+        // The frontend now sends a double-encoded plus sign ('%252B').
+        // Netlify's automatic decoding turns this into the single-encoded '%2B',
+        // which is the exact format ProKerala's API requires. No changes needed here.
+        const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${queryString}`;
+        const dashaUrl = `https://api.prokerala.com/v2/astrology/dasha-periods?${queryString}`;
+        const planetPositionUrl = `https://api.prokerala.com/v2/astrology/natal-planet-position?${queryString}`;
         
         console.log('Calling URLs:', { kundliUrl, dashaUrl, planetPositionUrl });
 
