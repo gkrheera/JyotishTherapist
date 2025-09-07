@@ -1,5 +1,5 @@
-<!-- JyotishTherapist Frontend v3.0.9 (Production Ready) -->
-<!-- Definitive fix for date encoding using double encoding on the frontend. -->
+<!-- JyotishTherapist Frontend v3.1.0 (Production Ready) -->
+<!-- Definitive fix for date encoding by manually building the query string to prevent encoding of ':' and '+' characters. -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -563,14 +563,8 @@
                     const datetimeWithSeconds = appState.birthDetails.datetimeLocal + ':00';
                     const datetimeForApi = datetimeWithSeconds + offset;
                     
-                    // **THE FIX: Double encode the datetime parameter**
-                    const params = new URLSearchParams({
-                        datetime: encodeURIComponent(datetimeForApi),
-                        coordinates: appState.coordinates,
-                        ayanamsa: 1
-                    });
-
-                    const queryString = params.toString();
+                    // **THE FIX: Manually build the query string to prevent incorrect encoding.**
+                    const queryString = `datetime=${datetimeForApi}&coordinates=${appState.coordinates}&ayanamsa=1`;
 
                     const { kundliData, dashaData } = await fetchAstroData(queryString);
                     appState.kundliData = kundliData;
