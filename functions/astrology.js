@@ -1,10 +1,11 @@
 /**
- * JyotishTherapist Backend v5.1.0 (Production Ready)
+ * JyotishTherapist Backend v6.0.0 (Production Ready)
  *
- * Final Fix: This version implements the simplest possible logic based on Netlify
- * function logs. It passes the event.rawQuery directly to the ProKerala API
- * without any parsing or modification. This avoids all issues with Netlify's
- * intermediate decoding steps.
+ * Final Fix: This version uses a simple pass-through logic. The frontend is
+ * now responsible for manually encoding the '+' sign to '%2B'. This function
+ * simply forwards the event.rawQuery to the ProKerala API, which is the most
+ * robust way to handle Netlify's specific encoding behavior. A verification
+ * log has been added to confirm the exact URL being called.
  */
 
 // A simple in-memory cache for the access token to improve performance.
@@ -80,12 +81,14 @@ exports.handler = async (event) => {
         const headers = { 'Authorization': `Bearer ${accessToken}` };
         
         // **THE DEFINITIVE FIX: Pass the raw query string directly through.**
-        // We will not parse, modify, or re-encode the query string.
+        // The frontend now sends the correctly formatted query string with '%2B' for the plus sign.
+        // This function's only job is to pass it along without modification.
         const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${queryString}`;
         const dashaUrl = `https://api.prokerala.com/v2/astrology/dasha-periods?${queryString}`;
         const planetPositionUrl = `https://api.prokerala.com/v2/astrology/natal-planet-position?${queryString}`;
         
-        console.log('Calling Passthrough URLs:', { kundliUrl, dashaUrl, planetPositionUrl });
+        // VERIFICATION LOG: Check the Netlify logs to see the exact URL being called.
+        console.log('VERIFICATION: Calling Passthrough URLs:', { kundliUrl, dashaUrl, planetPositionUrl });
 
         const [kundliResponse, dashaResponse, planetPositionResponse] = await Promise.all([
             fetch(kundliUrl, { headers }),
