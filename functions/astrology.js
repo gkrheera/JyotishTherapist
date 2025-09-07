@@ -1,11 +1,10 @@
 /**
- * JyotishTherapist Backend v7.0.0 (Production Ready)
+ * JyotishTherapist Backend v8.0.0 (Production Ready)
  *
  * Final Fix: This version implements a targeted fix based on analysis of
  * Netlify logs. It surgically replaces the space character introduced by
- * Netlify's decoding with the '%2B' that the ProKerala API requires.
- * This is the most robust solution as it only modifies the known incorrect
- * character while leaving the rest of the query string intact.
+ * Netlify's decoding with the required '%2B' before passing the query
+ * to the ProKerala API.
  */
 
 // A simple in-memory cache for the access token to improve performance.
@@ -78,10 +77,10 @@ exports.handler = async (event) => {
         }
 
         // **THE DEFINITIVE FIX: Surgically replace the space with '%2B'.**
-        // Netlify incorrectly decodes '%2B' to a space. We replace it back to the
-        // required '%2B' format for the ProKerala API. This regular expression
-        // ensures we only replace the space between the time and the offset.
-        const correctedQueryString = queryString.replace(/(\d{2}:\d{2}:\d{2})\s(\d{2}:\d{2})/, '$1%2B$2');
+        // Netlify incorrectly decodes the browser's '%2B' to a space. We find
+        // that specific space and replace it with the '%2B' that ProKerala requires.
+        // This regex looks for a datetime string and replaces the space before the timezone.
+        const correctedQueryString = queryString.replace(/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})\s/, '$1%2B');
 
         const accessToken = await getAccessToken(CLIENT_ID, CLIENT_SECRET);
         const headers = { 'Authorization': `Bearer ${accessToken}` };
