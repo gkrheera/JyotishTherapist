@@ -1,11 +1,11 @@
 /**
- * JyotishTherapist Backend v10.0.0 (Production Ready)
+ * JyotishTherapist Backend v11.0.0 (Production Ready)
  *
- * Final, Log-Verified Fix: This version implements a deconstruct/reconstruct
- * strategy inside the function. It parses the incoming, damaged query string from
- * Netlify, surgically corrects the datetime parameter by replacing the space
- * with the required '%2B', and then manually rebuilds the final query string.
- * This gives us absolute control and bypasses any unpredictable re-encoding.
+ * This version uses the definitive, log-verified fix. The frontend sends a
+ * standard URL-encoded request. The backend receives the query string after
+ * Netlify has incorrectly decoded '%2B' to a space. This code surgically
+ * replaces that space with the string '%2B', which is the exact format the
+ * ProKerala API requires.
  */
 
 // A simple in-memory cache for the access token to improve performance.
@@ -77,7 +77,7 @@ exports.handler = async (event) => {
             };
         }
 
-        // 1. Parse the incoming query string from Netlify.
+        // 1. Parse the incoming query string that was damaged by Netlify.
         const params = new URLSearchParams(queryString);
         
         // 2. Extract the individual components.
@@ -92,8 +92,8 @@ exports.handler = async (event) => {
             };
         }
 
-        // 3. Correct the datetime string that was damaged by Netlify's decoding.
-        // Replace the space with the URL-encoded plus sign ('%2B').
+        // 3. DEFINITIVE FIX: Correct the datetime string by replacing the space 
+        //    (which was a '+' before Netlify decoded it) with the required '%2B' string.
         const correctedDateTime = dateTimeValue.replace(' ', '%2B');
 
         // 4. Manually build the final, correct query string.
