@@ -521,7 +521,7 @@
             // --- EVENT LISTENERS & INITIALIZATION ---
             placeInput.addEventListener('change', () => getCoordinates(placeInput.value));
 
-            calculateBtn.addEventListener('click', async () => {
+            calculateBtn.addEventListener('click', async (). => {
                 clearError();
                 
                 appState.birthDetails = {
@@ -557,6 +557,7 @@
                     const datetimeWithSeconds = appState.birthDetails.datetimeLocal + ':00';
                     const datetimeForApi = datetimeWithSeconds + offset;
                     
+                    // **THE FIX: Manually build the query string**
                     const queryString = `datetime=${encodeURIComponent(datetimeForApi)}&coordinates=${encodeURIComponent(appState.coordinates)}&ayanamsa=1`;
 
                     const { kundliData, dashaData } = await fetchAstroData(queryString);
