@@ -1,11 +1,11 @@
 /**
- * JyotishTherapist Backend v6.0.0 (Production Ready)
+ * JyotishTherapist Backend v7.0.0 (Production Ready)
  *
- * Final Fix: This version uses a simple pass-through logic. The frontend is
- * now responsible for manually encoding the '+' sign to '%2B'. This function
- * simply forwards the event.rawQuery to the ProKerala API, which is the most
- * robust way to handle Netlify's specific encoding behavior. A verification
- * log has been added to confirm the exact URL being called.
+ * Final Fix: This version implements a targeted fix based on analysis of
+ * Netlify logs. It surgically replaces the space character introduced by
+ * Netlify's decoding with the '%2B' that the ProKerala API requires.
+ * This is the most robust solution as it only modifies the known incorrect
+ * character while leaving the rest of the query string intact.
  */
 
 // A simple in-memory cache for the access token to improve performance.
@@ -69,7 +69,7 @@ exports.handler = async (event) => {
     }
 
     try {
-        const queryString = event.rawQuery;
+        let queryString = event.rawQuery;
         if (!queryString) {
              return {
                 statusCode: 400,
@@ -77,18 +77,21 @@ exports.handler = async (event) => {
             };
         }
 
+        // **THE DEFINITIVE FIX: Surgically replace the space with '%2B'.**
+        // Netlify incorrectly decodes '%2B' to a space. We replace it back to the
+        // required '%2B' format for the ProKerala API. This regular expression
+        // ensures we only replace the space between the time and the offset.
+        const correctedQueryString = queryString.replace(/(\d{2}:\d{2}:\d{2})\s(\d{2}:\d{2})/, '$1%2B$2');
+
         const accessToken = await getAccessToken(CLIENT_ID, CLIENT_SECRET);
         const headers = { 'Authorization': `Bearer ${accessToken}` };
         
-        // **THE DEFINITIVE FIX: Pass the raw query string directly through.**
-        // The frontend now sends the correctly formatted query string with '%2B' for the plus sign.
-        // This function's only job is to pass it along without modification.
-        const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${queryString}`;
-        const dashaUrl = `https://api.prokerala.com/v2/astrology/dasha-periods?${queryString}`;
-        const planetPositionUrl = `https://api.prokerala.com/v2/astrology/natal-planet-position?${queryString}`;
+        const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${correctedQueryString}`;
+        const dashaUrl = `https://api.prokerala.com/v2/astrology/dasha-periods?${correctedQueryString}`;
+        const planetPositionUrl = `https://api.prokerala.com/v2/astrology/natal-planet-position?${correctedQueryString}`;
         
-        // VERIFICATION LOG: Check the Netlify logs to see the exact URL being called.
-        console.log('VERIFICATION: Calling Passthrough URLs:', { kundliUrl, dashaUrl, planetPositionUrl });
+        // VERIFICATION LOG:
+        console.log('VERIFICATION: Calling Corrected URLs:', { kundliUrl, dashaUrl, planetPositionUrl });
 
         const [kundliResponse, dashaResponse, planetPositionResponse] = await Promise.all([
             fetch(kundliUrl, { headers }),
