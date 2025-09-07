@@ -1,12 +1,9 @@
 /**
- * JyotishTherapist Backend v4.0.9 (Production Ready)
+ * JyotishTherapist Backend v4.0.2 (Production Ready)
  *
- * Final Fix: Reverted to the logic that corrects for Netlify's specific
- * misinterpretation of the plus sign.
- * The frontend sends a standard, browser-encoded URL. The browser correctly
- * turns '+' into '%2B'. Netlify incorrectly turns '%2B' into a space.
- * This function reverses that one incorrect transformation before passing the
- * request to the ProKerala API.
+ * This version simplifies the backend by removing all special encoding handling.
+ * It now assumes the frontend is sending a perfectly formatted query string
+ * and acts as a direct pass-through proxy.
  */
 
 // A simple in-memory cache for the access token to improve performance.
@@ -70,38 +67,21 @@ exports.handler = async (event) => {
     }
 
     try {
-        if (!event.rawQuery) {
+        const queryString = event.rawQuery;
+        if (!queryString) {
              return {
                 statusCode: 400,
                 body: JSON.stringify({ error: 'Missing required query parameters.' })
             };
         }
 
-        // **THE FIX: Correct for Netlify's misinterpretation of the '+' character.**
-        const params = new URLSearchParams(event.rawQuery);
-        const datetime = params.get('datetime');
-        
-        if (!datetime) {
-            return {
-                statusCode: 400,
-                body: JSON.stringify({ error: 'Datetime parameter is missing.' })
-            };
-        }
-        
-        // Netlify incorrectly decodes '%2B' to a space. We change it back to a '+'.
-        const correctedDatetime = datetime.replace(' ', '+');
-        
-        // Rebuild the query string with the corrected datetime.
-        const finalParams = new URLSearchParams(params.toString());
-        finalParams.set('datetime', correctedDatetime);
-        const finalQueryString = finalParams.toString();
-        
         const accessToken = await getAccessToken(CLIENT_ID, CLIENT_SECRET);
         const headers = { 'Authorization': `Bearer ${accessToken}` };
         
-        const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${finalQueryString}`;
-        const dashaUrl = `https://api.prokerala.com/v2/astrology/dasha-periods?${finalQueryString}`;
-        const planetPositionUrl = `https://api.prokerala.com/v2/astrology/natal-planet-position?${finalQueryString}`;
+        // **THE FIX: Pass the raw query string directly, with no decoding or replacing.**
+        const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${queryString}`;
+        const dashaUrl = `https://api.prokerala.com/v2/astrology/dasha-periods?${queryString}`;
+        const planetPositionUrl = `https://api.prokerala.com/v2/astrology/natal-planet-position?${queryString}`;
         
         console.log('Calling URLs:', { kundliUrl, dashaUrl, planetPositionUrl });
 
@@ -150,4 +130,3 @@ exports.handler = async (event) => {
         };
     }
 };
-
