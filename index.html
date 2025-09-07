@@ -1,5 +1,5 @@
-<!-- JyotishTherapist Frontend v3.1.2 (Production Ready) -->
-<!-- Definitive fix for date encoding: Manually pre-encode the '+' sign to survive Netlify's decoding. -->
+<!-- JyotishTherapist Frontend v3.1.3 (Production Ready) -->
+<!-- Definitive fix for date encoding: Double-encode the '+' sign to survive Netlify's decoding. -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -563,9 +563,10 @@
                     const datetimeWithSeconds = appState.birthDetails.datetimeLocal + ':00';
                     const datetimeForApi = datetimeWithSeconds + offset;
                     
-                    // **THE FIX: Manually build the query string, but pre-encode the '+' in the datetime string.**
-                    // This creates a double-encoded plus sign (%252B) that survives Netlify's automatic decoding.
-                    const safeDatetime = datetimeForApi.replace(/\+/g, '%2B');
+                    // **THE FIX: Manually build the query string, double-encoding the '+' sign.**
+                    // This creates '%252B', which survives Netlify's decoding and becomes '%2B'
+                    // in the serverless function, which is what the ProKerala API expects.
+                    const safeDatetime = datetimeForApi.replace(/\+/g, '%252B');
                     const encodedCoordinates = encodeURIComponent(appState.coordinates);
                     const queryString = `datetime=${safeDatetime}&coordinates=${encodedCoordinates}&ayanamsa=1`;
 
