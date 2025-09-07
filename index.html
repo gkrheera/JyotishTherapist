@@ -1,5 +1,5 @@
-<!-- JyotishTherapist Frontend v3.2.0 (Production Ready) -->
-<!-- Definitive fix for date encoding by manually replacing '+' with '%2B' before sending. -->
+<!-- JyotishTherapist Frontend v3.2.1 (Production Ready) -->
+<!-- No changes needed. This version uses the standard URLSearchParams, which is correct. -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -563,10 +563,13 @@
                     const datetimeWithSeconds = appState.birthDetails.datetimeLocal + ':00';
                     const datetimeForApi = datetimeWithSeconds + offset;
                     
-                    // **THE FINAL FIX: Manually build the query string with a targeted replacement.**
-                    // This replaces '+' with '%2B' but leaves ':' characters alone.
-                    const safeDatetime = datetimeForApi.replace('+', '%2B');
-                    const queryString = `datetime=${safeDatetime}&coordinates=${encodeURIComponent(appState.coordinates)}&ayanamsa=1`;
+                    const params = new URLSearchParams({
+                        datetime: datetimeForApi,
+                        coordinates: appState.coordinates,
+                        ayanamsa: 1
+                    });
+
+                    const queryString = params.toString();
 
                     const { kundliData, dashaData } = await fetchAstroData(queryString);
                     appState.kundliData = kundliData;
