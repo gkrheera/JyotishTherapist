@@ -1,5 +1,5 @@
-<!-- JyotishTherapist Frontend v3.1.0 (Production Ready) -->
-<!-- Definitive fix for date encoding by manually building the query string to prevent encoding of ':' and '+' characters. -->
+<!-- JyotishTherapist Frontend v3.1.2 (Production Ready) -->
+<!-- Definitive fix for date encoding: Manually pre-encode the '+' sign to survive Netlify's decoding. -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -457,7 +457,7 @@
                     textEl.setAttribute('class', 'planet-text');
                     if (text === 'As') textEl.classList.add('ascendant-text');
                     let planetColor = '#fbbf24';
-                    if (['Ra', 'Ke'].includes(text)) planetColor = '#94a3b8';
+                    if (['Ra', 'Ke'].includes(planet)) planetColor = '#94a3b8';
                     else if (text === 'Sa') planetColor = '#60a5fa';
                     else if (text === 'Ma') planetColor = '#f87171';
                     textEl.setAttribute('fill', planetColor);
@@ -563,8 +563,11 @@
                     const datetimeWithSeconds = appState.birthDetails.datetimeLocal + ':00';
                     const datetimeForApi = datetimeWithSeconds + offset;
                     
-                    // **THE FIX: Manually build the query string to prevent incorrect encoding.**
-                    const queryString = `datetime=${datetimeForApi}&coordinates=${appState.coordinates}&ayanamsa=1`;
+                    // **THE FIX: Manually build the query string, but pre-encode the '+' in the datetime string.**
+                    // This creates a double-encoded plus sign (%252B) that survives Netlify's automatic decoding.
+                    const safeDatetime = datetimeForApi.replace(/\+/g, '%2B');
+                    const encodedCoordinates = encodeURIComponent(appState.coordinates);
+                    const queryString = `datetime=${safeDatetime}&coordinates=${encodedCoordinates}&ayanamsa=1`;
 
                     const { kundliData, dashaData } = await fetchAstroData(queryString);
                     appState.kundliData = kundliData;
