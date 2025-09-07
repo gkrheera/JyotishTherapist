@@ -1,9 +1,10 @@
 /**
- * JyotishTherapist Backend v4.0.2 (Production Ready)
+ * JyotishTherapist Backend v4.0.1 (Production Ready)
  *
- * This version simplifies the backend by removing all special encoding handling.
- * It now assumes the frontend is sending a perfectly formatted query string
- * and acts as a direct pass-through proxy.
+ * Implements robust error handling and correct date encoding. This version checks
+ * API response status before parsing JSON to prevent crashes and provides
+ * clear, specific error messages to the frontend. It now correctly handles
+ * the double-encoded datetime parameter from the frontend.
  */
 
 // A simple in-memory cache for the access token to improve performance.
@@ -78,10 +79,14 @@ exports.handler = async (event) => {
         const accessToken = await getAccessToken(CLIENT_ID, CLIENT_SECRET);
         const headers = { 'Authorization': `Bearer ${accessToken}` };
         
-        // **THE FIX: Pass the raw query string directly, with no decoding or replacing.**
-        const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${queryString}`;
-        const dashaUrl = `https://api.prokerala.com/v2/astrology/dasha-periods?${queryString}`;
-        const planetPositionUrl = `https://api.prokerala.com/v2/astrology/natal-planet-position?${queryString}`;
+        // **THE FIX: Handle the double-encoded datetime from the frontend.**
+        // Netlify auto-decodes once (e.g., %252B -> %2B). We replace the remaining
+        // encoded plus sign with a real plus sign.
+        const correctedQueryString = queryString.replace(/%2B/g, '+');
+
+        const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${correctedQueryString}`;
+        const dashaUrl = `https://api.prokerala.com/v2/astrology/dasha-periods?${correctedQueryString}`;
+        const planetPositionUrl = `https://api.prokerala.com/v2/astrology/natal-planet-position?${correctedQueryString}`;
         
         console.log('Calling URLs:', { kundliUrl, dashaUrl, planetPositionUrl });
 
