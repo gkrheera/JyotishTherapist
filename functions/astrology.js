@@ -1,10 +1,11 @@
 /**
- * JyotishTherapist Backend v4.0.7 (Production Ready)
+ * JyotishTherapist Backend v4.0.8 (Production Ready)
  *
- * This version corrects the handling of the timezone offset encoding issue
- * specific to Netlify. It parses the incoming query, fixes the timezone
- * parameter that Netlify incorrectly decodes, and then re-encodes the parameters
- * for the final, correct API call to ProKerala.
+ * Final Fix: This version acknowledges that Netlify incorrectly decodes a URL-encoded
+ * plus sign ('%2B') into a space. This code now passes the `event.rawQuery`
+ * directly to the ProKerala API without any parsing. This preserves the original
+ * encoding sent by the browser, ensuring the API receives the `datetime` parameter
+ * correctly formatted with '%2B' for the timezone.
  */
 
 // A simple in-memory cache for the access token to improve performance.
@@ -68,44 +69,24 @@ exports.handler = async (event) => {
     }
 
     try {
-        if (!event.rawQuery) {
+        const queryString = event.rawQuery;
+        if (!queryString) {
              return {
                 statusCode: 400,
                 body: JSON.stringify({ error: 'Missing required query parameters.' })
             };
         }
 
-        // **THE FIX: Rebuild the query string to counteract Netlify's incorrect decoding.**
-        // 1. The browser sends the '+' in the timezone correctly encoded as '%2B'.
-        // 2. Netlify's proxy incorrectly decodes '%2B' into a space ' '.
-        // 3. We parse the damaged query string to get the parameters.
-        const params = new URLSearchParams(event.rawQuery);
-        const datetime = params.get('datetime'); // This now has a space, e.g., "...18:30:00 05:30"
-        
-        if (!datetime) {
-            return {
-                statusCode: 400,
-                body: JSON.stringify({ error: 'Datetime parameter is missing.' })
-            };
-        }
-
-        // 4. We explicitly replace the space back to a '+'.
-        const correctedDatetime = datetime.replace(' ', '+');
-        
-        // 5. We build a NEW, correct URLSearchParams object.
-        const finalParams = new URLSearchParams(params.toString());
-        finalParams.set('datetime', correctedDatetime);
-
-        // 6. This new query string will be correctly encoded by the fetch call below,
-        //    turning our restored '+' back into the '%2B' that the ProKerala API expects.
-        const finalQueryString = finalParams.toString();
-
         const accessToken = await getAccessToken(CLIENT_ID, CLIENT_SECRET);
         const headers = { 'Authorization': `Bearer ${accessToken}` };
         
-        const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${finalQueryString}`;
-        const dashaUrl = `https://api.prokerala.com/v2/astrology/dasha-periods?${finalQueryString}`;
-        const planetPositionUrl = `https://api.prokerala.com/v2/astrology/natal-planet-position?${finalQueryString}`;
+        // **THE FIX: Pass the raw query string directly through.**
+        // The frontend uses URLSearchParams, which correctly encodes '+' to '%2B'.
+        // By using event.rawQuery, we bypass Netlify's incorrect decoding of '%2B' to a space.
+        // This sends the perfectly formatted query string to the ProKerala API.
+        const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${queryString}`;
+        const dashaUrl = `https://api.prokerala.com/v2/astrology/dasha-periods?${queryString}`;
+        const planetPositionUrl = `https://api.prokerala.com/v2/astrology/natal-planet-position?${queryString}`;
         
         console.log('Calling URLs:', { kundliUrl, dashaUrl, planetPositionUrl });
 
