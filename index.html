@@ -1,5 +1,3 @@
-<!-- JyotishTherapist Frontend v3.1.7 (Production Ready) -->
-<!-- Reverted to standard URLSearchParams. The backend will handle the Netlify decoding issue. -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -108,7 +106,6 @@
             <p class="text-slate-300 mt-2">Vedic Astrology Chart & AI-Powered Insights</p>
         </div>
 
-        <!-- Input Form -->
         <div class="card p-6">
             <h2 class="text-xl font-semibold mb-4 text-white">Enter Birth Details</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -138,7 +135,6 @@
             <div id="error-display" class="text-red-400 text-sm mt-2 text-center h-auto p-4 bg-red-900/20 border border-red-500/30 rounded-lg hidden"></div>
         </div>
         
-        <!-- Results Section -->
         <div id="results-section" class="hidden">
             <div class="text-center mb-8">
                 <h2 class="title-font text-3xl md:text-4xl font-bold text-amber-400">Vedic Horoscope</h2>
@@ -146,7 +142,6 @@
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <!-- Left Side: Chart -->
                 <div class="flex flex-col items-center">
                      <div class="mb-4">
                         <button id="southBtn" class="toggle-btn active">South Indian</button>
@@ -160,7 +155,6 @@
                      </div>
                 </div>
 
-                <!-- Right Side: Details -->
                 <div class="space-y-6">
                     <div class="card p-6">
                         <h2 class="title-font text-2xl font-bold text-amber-400 border-b border-slate-600 pb-3 mb-4">Core Identity</h2>
@@ -457,7 +451,7 @@
                     textEl.setAttribute('class', 'planet-text');
                     if (text === 'As') textEl.classList.add('ascendant-text');
                     let planetColor = '#fbbf24';
-                    if (['Ra', 'Ke'].includes(planet)) planetColor = '#94a3b8';
+                    if (['Ra', 'Ke'].includes(text)) planetColor = '#94a3b8';
                     else if (text === 'Sa') planetColor = '#60a5fa';
                     else if (text === 'Ma') planetColor = '#f87171';
                     textEl.setAttribute('fill', planetColor);
@@ -563,13 +557,7 @@
                     const datetimeWithSeconds = appState.birthDetails.datetimeLocal + ':00';
                     const datetimeForApi = datetimeWithSeconds + offset;
                     
-                    // **THE FIX: Use standard URLSearchParams. This correctly encodes '+' to '%2B'.**
-                    const params = new URLSearchParams({
-                        datetime: datetimeForApi,
-                        coordinates: appState.coordinates,
-                        ayanamsa: 1
-                    });
-                    const queryString = params.toString();
+                    const queryString = `datetime=${encodeURIComponent(datetimeForApi)}&coordinates=${encodeURIComponent(appState.coordinates)}&ayanamsa=1`;
 
                     const { kundliData, dashaData } = await fetchAstroData(queryString);
                     appState.kundliData = kundliData;
@@ -600,4 +588,3 @@
     </script>
 </body>
 </html>
-
