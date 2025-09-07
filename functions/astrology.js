@@ -1,9 +1,10 @@
 /**
- * JyotishTherapist Backend v4.0.0 (Production Ready)
+ * JyotishTherapist Backend v4.0.1 (Production Ready)
  *
  * Implements robust error handling and correct date encoding. This version checks
  * API response status before parsing JSON to prevent crashes and provides
- * clear, specific error messages to the frontend.
+ * clear, specific error messages to the frontend. It now correctly handles
+ * the double-encoded datetime parameter from the frontend.
  */
 
 // A simple in-memory cache for the access token to improve performance.
@@ -78,7 +79,9 @@ exports.handler = async (event) => {
         const accessToken = await getAccessToken(CLIENT_ID, CLIENT_SECRET);
         const headers = { 'Authorization': `Bearer ${accessToken}` };
         
-        // Correctly handle the timezone offset '+' character.
+        // **THE FIX: Handle the double-encoded datetime from the frontend.**
+        // Netlify auto-decodes once (e.g., %252B -> %2B). We replace the remaining
+        // encoded plus sign with a real plus sign.
         const correctedQueryString = queryString.replace(/%2B/g, '+');
 
         const kundliUrl = `https://api.prokerala.com/v2/astrology/kundli?${correctedQueryString}`;
@@ -132,4 +135,3 @@ exports.handler = async (event) => {
         };
     }
 };
-
