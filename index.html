@@ -1,5 +1,5 @@
-<!-- JyotishTherapist Frontend v4.0.0 (Hybrid Architecture) -->
-<!-- This version now points to the new standalone Netlify proxy function. -->
+<!-- JyotishTherapist Frontend v4.1.0 (Hybrid Architecture w/ Renamed Proxy) -->
+<!-- This version now points to the new standalone jyotishtherapist-proxy function. -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -256,8 +256,10 @@
             }
             
             async function fetchAstroData(endpoint, params) {
-                // IMPORTANT: Replace this with the URL of your deployed proxy function.
-                const proxyUrl = 'https://jyotishtherapist-proxy.netlify.app/.netlify/functions/proxy'; 
+                // IMPORTANT: The proxyUrl should be the ROOT domain of your proxy site,
+                // NOT the direct function endpoint. This allows the Netlify redirect
+                // rule to correctly process the request path and query string.
+                const proxyUrl = 'https://jyotishtherapist-proxy.netlify.app'; 
             
                 const url = new URL(`${proxyUrl}${endpoint}`);
                 Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
@@ -610,3 +612,5 @@
     </script>
 </body>
 </html>
+
+
