@@ -257,7 +257,7 @@
             
             async function fetchAstroData(endpoint, params) {
                 // IMPORTANT: Replace this with the URL of your deployed proxy function.
-                const proxyUrl = 'https://vedictherapist-proxy.netlify.app/.netlify/functions/proxy'; 
+                const proxyUrl = 'https://jyotishtherapist-proxy.netlify.app/.netlify/functions/proxy'; 
             
                 const url = new URL(`${proxyUrl}${endpoint}`);
                 Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
