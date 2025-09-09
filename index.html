@@ -1,5 +1,5 @@
-<!-- JyotishTherapist Frontend v3.2.1 (Production Ready) -->
-<!-- No changes needed. This version uses the standard URLSearchParams, which is correct. -->
+<!-- JyotishTherapist Frontend v4.0.0 (Hybrid Architecture) -->
+<!-- This version now points to the new standalone Netlify proxy function. -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -255,27 +255,27 @@
                 }
             }
             
-            async function fetchAstroData(queryString) {
+            async function fetchAstroData(endpoint, params) {
+                // IMPORTANT: Replace this with the URL of your deployed proxy function.
+                const proxyUrl = 'https://vedictherapist-proxy.netlify.app/.netlify/functions/proxy'; 
+            
+                const url = new URL(`${proxyUrl}${endpoint}`);
+                Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+
                 try {
-                    const response = await fetch(`/api/astrology?${queryString}`);
+                    const response = await fetch(url);
+                    const responseData = await response.json();
                     if (!response.ok) {
-                        let errorMsg = `An error occurred in the serverless function (Status: ${response.status}).`;
-                        try {
-                            const errorData = await response.json();
-                            if (errorData.error) {
-                                errorMsg = errorData.error;
-                            }
-                        } catch (e) {
-                           // Ignore if the error response isn't JSON
-                        }
+                        const errorMsg = responseData.error || responseData.errors?.[0]?.detail || `API request failed with status ${response.status}`;
                         throw new Error(errorMsg);
                     }
-                    return await response.json();
+                    return responseData;
                 } catch (error) {
                     showError(`<strong>Error:</strong> ${error.message}`);
                     throw error;
                 }
             }
+
 
             async function getAstrologicalInsight(question) {
                 if (!appState.chartData.ascendant) {
@@ -563,18 +563,28 @@
                     const datetimeWithSeconds = appState.birthDetails.datetimeLocal + ':00';
                     const datetimeForApi = datetimeWithSeconds + offset;
                     
-                    const params = new URLSearchParams({
+                    const params = {
                         datetime: datetimeForApi,
                         coordinates: appState.coordinates,
                         ayanamsa: 1
-                    });
+                    };
 
-                    const queryString = params.toString();
+                    const [kundliData, dashaData, planetPositionData] = await Promise.all([
+                        fetchAstroData('/v2/astrology/kundli', params),
+                        fetchAstroData('/v2/astrology/dasha-periods', params),
+                        fetchAstroData('/v2/astrology/natal-planet-position', params)
+                    ]);
+                    
+                    // Merge data for UI processing
+                    if (planetPositionData.data) {
+                        kundliData.data.ascendant = planetPositionData.data.ascendant;
+                        kundliData.data.planet_positions = planetPositionData.data.planets;
+                    }
 
-                    const { kundliData, dashaData } = await fetchAstroData(queryString);
                     appState.kundliData = kundliData;
                     appState.dashaData = dashaData;
                     updateUI();
+
                 } catch (error) {
                     console.error('Failed to process astrological data:', error);
                 } finally {
@@ -600,4 +610,3 @@
     </script>
 </body>
 </html>
-
