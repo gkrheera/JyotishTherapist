@@ -415,7 +415,7 @@
                         fetchAstroData('/v2/astrology/natal-planet-position', planetParams)
                     ]);
                     
-                    // DEFINITIVE FIX: Correctly access the nested 'data' object
+                    // DEFINITIVE FIX: Correctly access the nested 'data' object from the planet position response
                     if (planetPositionData && planetPositionData.data) {
                         kundliData.data.ascendant = planetPositionData.data.ascendant;
                         kundliData.data.planet_positions = planetPositionData.data.planets;
@@ -444,4 +444,5 @@
     </script>
 </body>
 </html>
+
 
