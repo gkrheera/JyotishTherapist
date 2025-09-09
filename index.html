@@ -261,8 +261,20 @@
                 // rule to correctly process the request path and query string.
                 const proxyUrl = 'https://jyotishtherapist-proxy.netlify.app'; 
             
-                const url = new URL(`${proxyUrl}${endpoint}`);
-                Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+                // DEFINITIVE FIX: Manually construct the query string to prevent
+                // URLSearchParams from automatically encoding the colons ':' which the API rejects.
+                const queryString = Object.entries(params)
+                    .map(([key, value]) => {
+                        // The datetime value is already correctly pre-encoded.
+                        // Other values should be encoded as normal.
+                        if (key === 'datetime') {
+                            return `${key}=${value}`;
+                        }
+                        return `${key}=${encodeURIComponent(value)}`;
+                    })
+                    .join('&');
+
+                const url = `${proxyUrl}${endpoint}?${queryString}`;
 
                 try {
                     const response = await fetch(url);
@@ -565,10 +577,14 @@
                     const datetimeWithSeconds = appState.birthDetails.datetimeLocal + ':00';
                     const datetimeForApi = datetimeWithSeconds + offset;
                     
+                    // DEFINITIVE FIX: Manually encode ONLY the '+' sign in the datetime string.
+                    // The API expects literal colons ':', but the '+' must be encoded to '%2B'.
+                    const correctlyEncodedDatetime = datetimeForApi.replace(/\+/g, '%2B');
+
                     const params = {
-                        datetime: datetimeForApi,
+                        datetime: correctlyEncodedDatetime,
                         coordinates: appState.coordinates,
-                        ayanamsa: 1
+ayanamsa: 1
                     };
 
                     const [kundliData, dashaData, planetPositionData] = await Promise.all([
@@ -612,5 +628,6 @@
     </script>
 </body>
 </html>
+
 
 
