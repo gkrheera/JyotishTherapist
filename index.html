@@ -1,4 +1,4 @@
-<!-- JyotishTherapist Frontend v11.0.0 (Final Coordinate Precision Fix) -->
+<!-- JyotishTherapist Frontend v12.0.0 (Final API Inconsistency Fix) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -191,32 +191,23 @@
             async function fetchAstroData(endpoint, params) {
                 const proxyUrl = 'https://jyotishtherapist-proxy.netlify.app'; 
                 
-                const queryString = Object.entries(params)
-                    .map(([key, value]) => {
-                        let encodedValue;
-                        if (key === 'datetime') {
-                            encodedValue = value.replace(/\+/g, '%2B'); 
-                        } else if (key === 'coordinates') {
-                            encodedValue = value; 
-                        } else {
-                            encodedValue = encodeURIComponent(value);
-                        }
-                        return `${key}=${encodedValue}`;
-                    })
-                    .join('&');
-                
+                const queryString = new URLSearchParams(params).toString();
                 const url = `${proxyUrl}${endpoint}?${queryString}`;
 
                 try {
                     const response = await fetch(url);
-                    const responseData = await response.json();
                     if (!response.ok) {
-                        const errorMsg = responseData.error || `API request failed with status ${response.status}`;
+                        // Try to parse error JSON, but fall back to status text
+                        let errorMsg = `API request failed with status ${response.status}`;
+                        try {
+                            const errorData = await response.json();
+                            errorMsg = errorData.errors?.[0]?.detail || errorData.error || errorMsg;
+                        } catch(e) { /* ignore json parsing errors */ }
                         throw new Error(errorMsg);
                     }
-                    return responseData;
+                    return await response.json();
                 } catch (error) {
-                    showError(`<strong>Error:</strong> ${error.message}`);
+                    showError(`<strong>Error processing astrological data:</strong> ${error.message}`);
                     throw error;
                 }
             }
@@ -408,16 +399,24 @@
                     const datetimeWithSeconds = appState.birthDetails.datetimeLocal + ':00';
                     const datetimeForApi = datetimeWithSeconds + offset;
                     
-                    const params = { 
-                        datetime: datetimeForApi, 
-                        coordinates: appState.coordinates, 
-                        ayanamsa: 1 
+                    // Params for the two standard endpoints
+                    const commonParams = {
+                        datetime: datetimeForApi,
+                        coordinates: appState.coordinates,
+                        ayanamsa: 1
                     };
-                    
+
+                    // Params for the non-standard planet position endpoint
+                    const planetParams = {
+                        'profile[datetime]': datetimeForApi,
+                        'profile[coordinates]': appState.coordinates,
+                        ayanamsa: 1
+                    };
+
                     const [kundliData, dashaData, planetPositionData] = await Promise.all([
-                        fetchAstroData('/v2/astrology/kundli', params),
-                        fetchAstroData('/v2/astrology/dasha-periods', params),
-                        fetchAstroData('/v2/astrology/natal-planet-position', params)
+                        fetchAstroData('/v2/astrology/kundli', commonParams),
+                        fetchAstroData('/v2/astrology/dasha-periods', commonParams),
+                        fetchAstroData('/v2/astrology/natal-planet-position', planetParams)
                     ]);
                     
                     if (planetPositionData.data) {
@@ -447,3 +446,4 @@
     </script>
 </body>
 </html>
+
