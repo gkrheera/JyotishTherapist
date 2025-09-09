@@ -1,4 +1,4 @@
-<!-- JyotishTherapist Frontend v5.0.0 (POST-based Architecture) -->
+<!-- JyotishTherapist Frontend v5.1.0 (Final & Robust) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -188,7 +188,6 @@
             }
             
             async function fetchAstroData(requestBody) {
-                // We now call the function's direct URL, bypassing redirects entirely.
                 const proxyUrl = 'https://jyotishtherapist-proxy.netlify.app/.netlify/functions/proxy';
                 try {
                     const response = await fetch(proxyUrl, {
@@ -391,10 +390,16 @@
                     return;
                 }
                 try {
+                    // DEFINITIVE FIX: The frontend's only job is to create the raw ISO string.
+                    // The proxy is now responsible for ALL encoding.
                     const datetimeWithSeconds = appState.birthDetails.datetimeLocal + ':00';
                     const datetimeForApi = datetimeWithSeconds + offset;
-                    const correctlyEncodedDatetime = datetimeForApi.replace(/\+/g, '%2B');
-                    const params = { datetime: correctlyEncodedDatetime, coordinates: appState.coordinates, ayanamsa: 1 };
+                    
+                    const params = { 
+                        datetime: datetimeForApi, 
+                        coordinates: appState.coordinates, 
+                        ayanamsa: 1 
+                    };
                     
                     const [kundliData, dashaData, planetPositionData] = await Promise.all([
                         fetchAstroData({ endpoint: '/v2/astrology/kundli', params: params }),
