@@ -1,4 +1,4 @@
-<!-- JyotishTherapist Frontend v12.0.0 (Final API Inconsistency Fix) -->
+<!-- JyotishTherapist Frontend v13.0.0 (Final Data Merging Fix) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -176,7 +176,6 @@
                     const data = await response.json();
                     if (data && data.length > 0) {
                         const { lat, lon } = data[0];
-                        // DEFINITIVE FIX: Truncate coordinates to 2 decimal places as per API error message.
                         const coords = `${parseFloat(lat).toFixed(2)},${parseFloat(lon).toFixed(2)}`;
                         coordsDisplay.textContent = `Found: ${coords}`;
                         return coords;
@@ -188,7 +187,7 @@
                 }
             }
             
-            async function fetchAstroData(endpoint, params) {
+             async function fetchAstroData(endpoint, params) {
                 const proxyUrl = 'https://jyotishtherapist-proxy.netlify.app'; 
                 
                 const queryString = new URLSearchParams(params).toString();
@@ -197,7 +196,6 @@
                 try {
                     const response = await fetch(url);
                     if (!response.ok) {
-                        // Try to parse error JSON, but fall back to status text
                         let errorMsg = `API request failed with status ${response.status}`;
                         try {
                             const errorData = await response.json();
@@ -399,14 +397,12 @@
                     const datetimeWithSeconds = appState.birthDetails.datetimeLocal + ':00';
                     const datetimeForApi = datetimeWithSeconds + offset;
                     
-                    // Params for the two standard endpoints
                     const commonParams = {
                         datetime: datetimeForApi,
                         coordinates: appState.coordinates,
                         ayanamsa: 1
                     };
 
-                    // Params for the non-standard planet position endpoint
                     const planetParams = {
                         'profile[datetime]': datetimeForApi,
                         'profile[coordinates]': appState.coordinates,
@@ -419,10 +415,12 @@
                         fetchAstroData('/v2/astrology/natal-planet-position', planetParams)
                     ]);
                     
-                    if (planetPositionData.data) {
+                    // DEFINITIVE FIX: Correctly access the nested 'data' object
+                    if (planetPositionData && planetPositionData.data) {
                         kundliData.data.ascendant = planetPositionData.data.ascendant;
                         kundliData.data.planet_positions = planetPositionData.data.planets;
                     }
+
                     appState.kundliData = kundliData;
                     appState.dashaData = dashaData;
                     updateUI();
