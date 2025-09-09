@@ -1,4 +1,4 @@
-<!-- JyotishTherapist Frontend v9.0.0 (Final, Reverted & Verified) -->
+<!-- JyotishTherapist Frontend v9.0.0 (Restored & Verified) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -189,17 +189,15 @@
             
             async function fetchAstroData(endpoint, params) {
                 const proxyUrl = 'https://jyotishtherapist-proxy.netlify.app'; 
-                
                 // DEFINITIVE FIX: Manually construct the query string to handle the API's
-                // non-standard encoding requirements.
+                // non-standard encoding requirements. This prevents colons from being encoded
+                // while ensuring the plus sign is correctly encoded as %2B.
                 const queryString = Object.entries(params)
                     .map(([key, value]) => {
-                        if (key === 'datetime') {
-                            // Do not encode colons, but do encode the plus sign.
-                            return `${key}=${value.replace(/\+/g, '%2B')}`;
-                        }
-                        // Encode other parameters normally.
-                        return `${key}=${encodeURIComponent(value)}`;
+                        const encodedValue = key === 'datetime' 
+                            ? value.replace(/\+/g, '%2B') 
+                            : encodeURIComponent(value);
+                        return `${key}=${encodedValue}`;
                     })
                     .join('&');
                 
