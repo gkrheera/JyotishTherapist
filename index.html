@@ -1,4 +1,4 @@
-<!-- JyotishTherapist Frontend v10.0.0 (Definitive Encoding Fix) -->
+<!-- JyotishTherapist Frontend v11.0.0 (Final Coordinate Precision Fix) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -176,7 +176,8 @@
                     const data = await response.json();
                     if (data && data.length > 0) {
                         const { lat, lon } = data[0];
-                        const coords = `${parseFloat(lat).toFixed(4)},${parseFloat(lon).toFixed(4)}`;
+                        // DEFINITIVE FIX: Truncate coordinates to 2 decimal places as per API error message.
+                        const coords = `${parseFloat(lat).toFixed(2)},${parseFloat(lon).toFixed(2)}`;
                         coordsDisplay.textContent = `Found: ${coords}`;
                         return coords;
                     } else { throw new Error(`Place "${placeName}" not found.`); }
@@ -190,18 +191,15 @@
             async function fetchAstroData(endpoint, params) {
                 const proxyUrl = 'https://jyotishtherapist-proxy.netlify.app'; 
                 
-                // DEFINITIVE FIX: Manually construct the query string to handle the API's
-                // non-standard encoding requirements for datetime (literal colons, encoded plus)
-                // and coordinates (literal comma).
                 const queryString = Object.entries(params)
                     .map(([key, value]) => {
                         let encodedValue;
                         if (key === 'datetime') {
-                            encodedValue = value.replace(/\+/g, '%2B'); // Keep colons, encode plus
+                            encodedValue = value.replace(/\+/g, '%2B'); 
                         } else if (key === 'coordinates') {
-                            encodedValue = value; // Keep comma literal
+                            encodedValue = value; 
                         } else {
-                            encodedValue = encodeURIComponent(value); // Standard encode for others
+                            encodedValue = encodeURIComponent(value);
                         }
                         return `${key}=${encodedValue}`;
                     })
@@ -399,7 +397,7 @@
                 }
                 calculateBtn.disabled = true;
                 calculateBtn.innerHTML = '<div class="flex items-center justify-center gap-2"><div class="loader"></div><span>Generating...</span></div>';
-                appState.coordinates = await getCoordinates(appState.birthDetails.place);
+                appState.coordinates = await getCoordinates(placeInput.value);
                 if (!appState.coordinates) {
                     showError('Could not find coordinates. Please enter a more specific place name.');
                     calculateBtn.disabled = false;
