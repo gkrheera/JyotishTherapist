@@ -1,5 +1,21 @@
 {
-  "name": "jyotish-therapist",
-  "version": "2.0.0",
-  "description": "A dynamic web application for generating Vedic astrology charts and insights via a secure serverless backend."
+  "name": "jyotishtherapist",
+  "version": "1.0.0",
+  "description": "Vedic Astrology Chart & AI Insights",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve",
+    "build": "echo 'No build step required for static files'"
+  },
+  "keywords": [
+    "astrology",
+    "vedic",
+    "kundli"
+  ],
+  "author": "GKRheera",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "serve": "^14.2.1"
+  }
 }
