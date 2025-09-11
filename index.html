@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JyotishTherapist</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn/tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -98,7 +98,9 @@
             }
 
             try {
-                const response = await fetch(`${PROXY_URL}?endpoint=geo-details&query=${encodeURIComponent(query)}`);
+                // FIX: The API endpoint must be part of the URL path, not a query parameter.
+                const endpoint = '/v2/location/geo-details';
+                const response = await fetch(`${PROXY_URL}${endpoint}?query=${encodeURIComponent(query)}`);
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 
                 const data = await response.json();
@@ -172,16 +174,18 @@
                     la: 'en'
                 });
 
-                const endpoints = ['birth-details', 'astro-details', 'yoga-details'];
+                // FIX: Endpoints must be the full path for the proxy to work correctly.
+                const endpoints = ['/v2/astrology/birth-details', '/v2/astrology/astro-details', '/v2/astrology/yoga-details'];
 
                 const apiPromises = endpoints.map(endpoint =>
-                    fetch(`${PROXY_URL}?endpoint=${endpoint}&${baseParams.toString()}`).then(res => res.ok ? res.json() : res.json().then(err => Promise.reject({ endpoint, error: err })))
+                    fetch(`${PROXY_URL}${endpoint}?${baseParams.toString()}`).then(res => res.ok ? res.json() : res.json().then(err => Promise.reject({ endpoint, error: err })))
                 );
                 
-                // Special handling for natal-planet-position (needs ayanamsa=1)
+                // FIX: Endpoint for planets must also be the full path.
+                const planetEndpoint = '/v2/astrology/natal-planet-position';
                 const planetParams = new URLSearchParams(baseParams);
                 planetParams.append('ayanamsa', '1');
-                const planetPromise = fetch(`${PROXY_URL}?endpoint=natal-planet-position&${planetParams.toString()}`).then(res => res.ok ? res.json() : res.json().then(err => Promise.reject({ endpoint: 'natal-planet-position', error: err })));
+                const planetPromise = fetch(`${PROXY_URL}${planetEndpoint}?${planetParams.toString()}`).then(res => res.ok ? res.json() : res.json().then(err => Promise.reject({ endpoint: planetEndpoint, error: err })));
 
                 apiPromises.push(planetPromise);
                 
@@ -193,10 +197,10 @@
                 let errorMessages = [];
 
                 results.forEach((result, index) => {
-                    const endpoint = [...endpoints, 'natal-planet-position'][index];
+                    const endpoint = [...endpoints, planetEndpoint][index];
                     if (result.status === 'fulfilled') {
                         // Correctly merge the nested data from planet position call
-                        if (endpoint === 'natal-planet-position') {
+                        if (endpoint === planetEndpoint) {
                             kundliData.data.ascendant = result.value.data.ascendant;
                             kundliData.data.planet_positions = result.value.data.planets;
                         } else {
