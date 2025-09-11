@@ -82,52 +82,58 @@
         const kundliDataContainer = document.getElementById('kundli-data');
         const formErrorDiv = document.getElementById('form-error');
 
-        // This is the URL of your deployed Netlify proxy function.
-        const PROXY_URL = 'https://jyotishtherapist-proxy.netlify.app/.netlify/functions/proxy';
+        const PROXY_URL = 'https://jyotishtherapist-proxy.netlify.app';
 
         let selectedLocation = null;
+        let locationDebounceTimeout; // Variable to hold the debounce timer
 
         // --- Location Autocomplete via Proxy ---
-        locationInput.addEventListener('input', async (e) => {
+        locationInput.addEventListener('input', (e) => {
             const query = e.target.value;
             selectedLocation = null; // Clear selection on new input
+            
+            // Clear the previous timeout to reset the timer
+            clearTimeout(locationDebounceTimeout);
+
             if (query.length < 3) {
                 suggestionsDiv.innerHTML = '';
                 suggestionsDiv.classList.add('hidden');
                 return;
             }
 
-            try {
-                // FIX: The API endpoint must be part of the URL path, not a query parameter.
-                const endpoint = '/v2/location/geo-details';
-                const response = await fetch(`${PROXY_URL}${endpoint}?query=${encodeURIComponent(query)}`);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                
-                const data = await response.json();
-                
-                suggestionsDiv.innerHTML = '';
-                if (data.data && data.data.length > 0) {
+            // Set a new timeout
+            locationDebounceTimeout = setTimeout(async () => {
+                try {
+                    const endpoint = '/v2/location/geo-details';
+                    const response = await fetch(`${PROXY_URL}${endpoint}?query=${encodeURIComponent(query)}`);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    
+                    const data = await response.json();
+                    
+                    suggestionsDiv.innerHTML = '';
+                    if (data.data && data.data.length > 0) {
+                        suggestionsDiv.classList.remove('hidden');
+                        data.data.slice(0, 5).forEach(loc => {
+                            const div = document.createElement('div');
+                            div.textContent = loc.name;
+                            div.className = 'p-3 cursor-pointer hover:bg-gray-100';
+                            div.onclick = () => {
+                                locationInput.value = loc.name;
+                                selectedLocation = loc;
+                                suggestionsDiv.innerHTML = '';
+                                suggestionsDiv.classList.add('hidden');
+                            };
+                            suggestionsDiv.appendChild(div);
+                        });
+                    } else {
+                        suggestionsDiv.classList.add('hidden');
+                    }
+                } catch (error) {
+                    console.error('Error fetching location suggestions:', error);
+                    suggestionsDiv.innerHTML = `<div class="p-3 text-red-500">Could not fetch locations.</div>`;
                     suggestionsDiv.classList.remove('hidden');
-                    data.data.slice(0, 5).forEach(loc => {
-                        const div = document.createElement('div');
-                        div.textContent = loc.name;
-                        div.className = 'p-3 cursor-pointer hover:bg-gray-100';
-                        div.onclick = () => {
-                            locationInput.value = loc.name;
-                            selectedLocation = loc;
-                            suggestionsDiv.innerHTML = '';
-                            suggestionsDiv.classList.add('hidden');
-                        };
-                        suggestionsDiv.appendChild(div);
-                    });
-                } else {
-                    suggestionsDiv.classList.add('hidden');
                 }
-            } catch (error) {
-                console.error('Error fetching location suggestions:', error);
-                suggestionsDiv.innerHTML = `<div class="p-3 text-red-500">Could not fetch locations.</div>`;
-                suggestionsDiv.classList.remove('hidden');
-            }
+            }, 400); // Wait for 400ms of inactivity before making the API call
         });
         
         // Hide suggestions when clicking outside the input/suggestions box
@@ -174,14 +180,12 @@
                     la: 'en'
                 });
 
-                // FIX: Endpoints must be the full path for the proxy to work correctly.
                 const endpoints = ['/v2/astrology/birth-details', '/v2/astrology/astro-details', '/v2/astrology/yoga-details'];
 
                 const apiPromises = endpoints.map(endpoint =>
                     fetch(`${PROXY_URL}${endpoint}?${baseParams.toString()}`).then(res => res.ok ? res.json() : res.json().then(err => Promise.reject({ endpoint, error: err })))
                 );
                 
-                // FIX: Endpoint for planets must also be the full path.
                 const planetEndpoint = '/v2/astrology/natal-planet-position';
                 const planetParams = new URLSearchParams(baseParams);
                 planetParams.append('ayanamsa', '1');
@@ -199,7 +203,6 @@
                 results.forEach((result, index) => {
                     const endpoint = [...endpoints, planetEndpoint][index];
                     if (result.status === 'fulfilled') {
-                        // Correctly merge the nested data from planet position call
                         if (endpoint === planetEndpoint) {
                             kundliData.data.ascendant = result.value.data.ascendant;
                             kundliData.data.planet_positions = result.value.data.planets;
