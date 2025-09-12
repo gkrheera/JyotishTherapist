@@ -63,9 +63,6 @@
                 const sign = timezoneOffset >= 0 ? '+' : '-';
                 const isoDateTime = `${dateTimeInput.value}:00${sign}${offsetHours}:${offsetMinutes}`;
                 
-                // CORRECTED: Manually build the query string to control encoding precisely.
-                // The API specifically needs the '+' in the timezone to be encoded as '%2B'.
-                // Using URLSearchParams encodes other characters (like '/' and ',') which causes issues.
                 const encodedDateTime = isoDateTime.replace('+', '%2B');
                 const endpoint = '/v2/astrology/panchang';
                 const ayanamsa = '1';
@@ -74,17 +71,33 @@
                 const queryString = `endpoint=${endpoint}&ayanamsa=${ayanamsa}&datetime=${encodedDateTime}&coordinates=${coordinates}`;
                 
                 const response = await fetch(`${PROXY_ENDPOINT}?${queryString}`);
-                const data = await response.json();
-
+                
                 if (!response.ok) {
-                    const errorMessage = data.error || (data.data ? data.data.message : 'An unknown API error occurred.');
+                    // First, get the raw response body as text.
+                    const errorText = await response.text();
+                    
+                    // Log the exact raw response to the console for debugging.
+                    console.error('Raw error response from proxy:', errorText);
+
+                    let errorMessage = 'An unknown API error occurred.';
+                    try {
+                        // Try to parse it as JSON to get a structured error message.
+                        const errorJson = JSON.parse(errorText);
+                        errorMessage = errorJson.error || (errorJson.data ? errorJson.data.message : errorText);
+                    } catch (e) {
+                        // If it's not JSON (e.g., an HTML error page), use the raw text itself as the error.
+                        errorMessage = errorText;
+                    }
+                    
                     throw new Error(`API Error (${response.status}): ${errorMessage}`);
                 }
 
+                const data = await response.json();
                 resultDiv.textContent = JSON.stringify(data, null, 2);
 
             } catch (error) {
                 resultDiv.textContent = `Error: ${error.message}`;
+                // This console.error will now log the detailed error thrown from the block above.
                 console.error('Error fetching data:', error);
             } finally {
                 fetchButton.disabled = false;
