@@ -3,336 +3,221 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JyotishTherapist</title>
+    <title>JyotishTherapist - Vedic Astrology AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        /* Simple focus states for accessibility and better UX */
-        input:focus, select:focus {
-            outline: 2px solid transparent;
-            outline-offset: 2px;
-            --tw-ring-color: #4f46e5; /* indigo-600 */
-            box-shadow: 0 0 0 2px var(--tw-ring-color);
-        }
+        .loader { border-top-color: #3498db; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="bg-gray-100">
-    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+<body class="bg-gray-100 font-sans">
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
         <header class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-gray-800">JyotishTherapist</h1>
-            <p class="text-lg text-gray-600 mt-2">Vedic Astrology Chart & AI Insights</p>
+            <h1 class="text-4xl font-bold text-gray-800">JyotishTherapist AI</h1>
+            <p class="text-lg text-gray-600 mt-2">Enter your birth details to generate your Vedic Astrology chart and get AI-powered insights.</p>
         </header>
 
-        <div class="bg-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
-            <h2 class="text-2xl font-semibold text-gray-700 mb-6">Enter Birth Details</h2>
-            <form id="kundliForm" novalidate>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
-                        <input type="text" id="name" name="name" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
+        <main>
+            <div id="form-container" class="bg-white p-6 rounded-lg shadow-md">
+                <form id="kundli-form">
+                    <!-- Form fields -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="name" class="block text-sm font-medium text-gray-700">Full Name</label>
+                            <input type="text" id="name" name="name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="e.g., Jane Doe">
+                        </div>
+                        <div>
+                            <label for="datetime" class="block text-sm font-medium text-gray-700">Date and Time of Birth</label>
+                            <input type="datetime-local" id="datetime" name="datetime" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        </div>
+                        <div class="md:col-span-2">
+                             <label for="location" class="block text-sm font-medium text-gray-700">Place of Birth</label>
+                             <div class="relative">
+                                <input type="text" id="location" name="location" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" placeholder="e.g., Delhi, India" autocomplete="off">
+                                <ul id="location-suggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 max-h-60 overflow-y-auto hidden"></ul>
+                             </div>
+                             <p id="coords-display" class="text-xs text-gray-500 mt-1 h-4"></p>
+                        </div>
                     </div>
-                    <div>
-                        <label for="gender" class="block text-sm font-medium text-gray-700">Gender</label>
-                        <select id="gender" name="gender" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
-                            <option value="male">Male</option>
-                            <option value="female">Female</option>
-                        </select>
+                    <div class="mt-6 text-center">
+                        <button id="calculate-btn" type="submit" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <span id="btn-text">Generate Chart</span>
+                            <div id="btn-loader" class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-6 w-6 ml-3 hidden"></div>
+                        </button>
                     </div>
-                    <div class="md:col-span-2">
-                        <label for="datetime" class="block text-sm font-medium text-gray-700">Date and Time of Birth</label>
-                        <input type="datetime-local" id="datetime" name="datetime" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
-                    </div>
-                    <div class="md:col-span-2 relative">
-                        <label for="location" class="block text-sm font-medium text-gray-700">Place of Birth</label>
-                        <input type="text" id="location" name="location" placeholder="e.g., London, UK" autocomplete="off" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
-                        <div id="suggestions" class="absolute bg-white border border-gray-300 rounded-md mt-1 shadow-lg z-10 w-full hidden"></div>
-                    </div>
-                </div>
-                <div id="form-error" class="hidden mt-4 text-center text-red-600 bg-red-100 p-3 rounded-md"></div>
-                <div class="mt-8 text-center">
-                    <button id="calculateBtn" type="submit" class="w-full sm:w-auto inline-flex justify-center items-center py-3 px-6 border border-transparent shadow-sm text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 disabled:cursor-not-allowed">
-                        <svg id="spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span id="btn-text">Generate Chart</span>
-                    </button>
-                </div>
-            </form>
-        </div>
+                </form>
+                <div id="error-display" class="mt-4 p-4 bg-red-100 text-red-700 rounded-md hidden"></div>
+            </div>
 
-        <div id="results" class="hidden mt-10 bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto">
-             <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">Astrological Chart for <span id="chart-name" class="text-indigo-600"></span></h2>
-             <div id="kundli-data" class="space-y-6"></div>
-        </div>
+            <div id="results-container" class="hidden mt-8 bg-white p-6 rounded-lg shadow-md">
+                 <h2 class="text-2xl font-bold text-gray-800 mb-4">Your Astrological Chart</h2>
+                 <pre id="chart-data" class="bg-gray-50 p-4 rounded-md overflow-x-auto text-sm"></pre>
+                 <h3 class="text-xl font-bold text-gray-800 mt-6 mb-4">AI Therapist Insights</h3>
+                 <div id="ai-response" class="prose max-w-none"></div>
+            </div>
+        </main>
     </div>
 
     <script>
-        // JyotishTherapist Frontend Logic - v1.7
-        const locationInput = document.getElementById('location');
-        const suggestionsDiv = document.getElementById('suggestions');
-        const form = document.getElementById('kundliForm');
-        const calculateBtn = document.getElementById('calculateBtn');
-        const btnText = document.getElementById('btn-text');
-        const spinner = document.getElementById('spinner');
-        const resultsDiv = document.getElementById('results');
-        const chartNameSpan = document.getElementById('chart-name');
-        const kundliDataContainer = document.getElementById('kundli-data');
-        const formErrorDiv = document.getElementById('form-error');
+        // JyotishTherapist Frontend Logic v2.0
+        document.addEventListener('DOMContentLoaded', function() {
+            const appState = { birthDetails: null, kundliData: null, dashaData: null, coordinates: null, chartData: { ascendant: '', planets: {} } };
+            const form = document.getElementById('kundli-form');
+            const locationInput = document.getElementById('location');
+            const locationSuggestions = document.getElementById('location-suggestions');
+            const coordsDisplay = document.getElementById('coords-display');
+            const errorDisplay = document.getElementById('error-display');
+            const calculateBtn = document.getElementById('calculate-btn');
+            const btnText = document.getElementById('btn-text');
+            const btnLoader = document.getElementById('btn-loader');
+            const resultsContainer = document.getElementById('results-container');
+            const chartDataEl = document.getElementById('chart-data');
+            const aiResponseEl = document.getElementById('ai-response');
 
-        const PROXY_URL = 'https://jyotishtherapist-proxy.netlify.app';
+            // **DEFINITIVE FIX**: This is the direct, stable URL for the Netlify proxy function.
+            // This architecture avoids complex and error-prone redirect rules.
+            const PROXY_URL = 'https://jyotishtherapist-proxy.netlify.app/.netlify/functions/proxy';
+            let debounceTimer;
 
-        let selectedLocation = null;
-        let locationDebounceTimeout; // Variable to hold the debounce timer
+            function showError(message) { errorDisplay.innerHTML = message; errorDisplay.classList.remove('hidden'); }
+            function clearError() { errorDisplay.textContent = ''; errorDisplay.classList.add('hidden'); }
 
-        // --- Location Autocomplete via Proxy ---
-        locationInput.addEventListener('input', (e) => {
-            const query = e.target.value;
-            selectedLocation = null; // Clear selection on new input
-            
-            // Clear the previous timeout to reset the timer
-            clearTimeout(locationDebounceTimeout);
-
-            if (query.length < 3) {
-                suggestionsDiv.innerHTML = '';
-                suggestionsDiv.classList.add('hidden');
-                return;
-            }
-
-            // Set a new timeout
-            locationDebounceTimeout = setTimeout(async () => {
+            async function getCoordinates(placeName) {
+                if (!placeName || placeName.length < 3) {
+                    locationSuggestions.innerHTML = '';
+                    locationSuggestions.classList.add('hidden');
+                    return null;
+                }
+                coordsDisplay.textContent = 'Searching...';
+                clearError();
                 try {
-                    const endpoint = '/v2/location/geo-details';
-                    const response = await fetch(`${PROXY_URL}${endpoint}?query=${encodeURIComponent(query)}`);
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    // The endpoint is now passed explicitly as a query parameter named 'endpoint'.
+                    const endpoint = 'v2/location/geo-details';
+                    const params = new URLSearchParams({ query: placeName, endpoint: endpoint }).toString();
+                    const response = await fetch(`${PROXY_URL}?${params}`);
                     
+                    if (!response.ok) { throw new Error(`Network error: ${response.statusText}`); }
                     const data = await response.json();
-                    
-                    suggestionsDiv.innerHTML = '';
-                    if (data.data && data.data.length > 0) {
-                        suggestionsDiv.classList.remove('hidden');
-                        data.data.slice(0, 5).forEach(loc => {
-                            const div = document.createElement('div');
-                            div.textContent = loc.name;
-                            div.className = 'p-3 cursor-pointer hover:bg-gray-100';
-                            div.onclick = () => {
+
+                    if (data && data.data && data.data.length > 0) {
+                        locationSuggestions.innerHTML = '';
+                        data.data.forEach(loc => {
+                            const li = document.createElement('li');
+                            li.textContent = loc.name;
+                            li.className = 'p-2 hover:bg-gray-200 cursor-pointer';
+                            li.onclick = () => {
                                 locationInput.value = loc.name;
-                                selectedLocation = loc;
-                                suggestionsDiv.innerHTML = '';
-                                suggestionsDiv.classList.add('hidden');
+                                const coords = `${parseFloat(loc.latitude).toFixed(4)},${parseFloat(loc.longitude).toFixed(4)}`;
+                                coordsDisplay.textContent = `Coordinates: ${coords}`;
+                                appState.coordinates = coords;
+                                locationSuggestions.classList.add('hidden');
                             };
-                            suggestionsDiv.appendChild(div);
+                            locationSuggestions.appendChild(li);
                         });
+                        locationSuggestions.classList.remove('hidden');
                     } else {
-                        suggestionsDiv.classList.add('hidden');
+                        locationSuggestions.classList.add('hidden');
                     }
                 } catch (error) {
-                    console.error('Error fetching location suggestions:', error);
-                    suggestionsDiv.innerHTML = `<div class="p-3 text-red-500">Could not fetch locations.</div>`;
-                    suggestionsDiv.classList.remove('hidden');
+                    console.error("Geocoding Error:", error);
+                    showError(`Location Error: ${error.message}`);
+                    locationSuggestions.classList.add('hidden');
                 }
-            }, 400); // Wait for 400ms of inactivity before making the API call
-        });
-        
-        // Hide suggestions when clicking outside the input/suggestions box
-        document.addEventListener('click', function(event) {
-            if (!locationInput.contains(event.target) && !suggestionsDiv.contains(event.target)) {
-                suggestionsDiv.classList.add('hidden');
-            }
-        });
-
-        // --- Form Submission Logic ---
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            formErrorDiv.classList.add('hidden');
-
-            if (!form.checkValidity() || !selectedLocation) {
-                 formErrorDiv.textContent = 'Please fill out all fields and select a location from the suggestions.';
-                 formErrorDiv.classList.remove('hidden');
-                 return;
             }
 
-            // Show spinner and disable button
-            spinner.classList.remove('hidden');
-            btnText.textContent = 'Generating...';
-            calculateBtn.disabled = true;
-            resultsDiv.classList.add('hidden');
-            kundliDataContainer.innerHTML = '';
-
-            const name = document.getElementById('name').value;
-            const datetime = document.getElementById('datetime').value; // YYYY-MM-DDTHH:mm
-            const [date, time] = datetime.split('T');
-            const [year, month, day] = date.split('-');
-            const [hour, minute] = time.split(':');
-            
-            const coordinates = `${selectedLocation.latitude},${selectedLocation.longitude}`;
-            const timezone = selectedLocation.timezone.name;
-
-            try {
-                // --- Parallel API Calls ---
-                const baseParams = new URLSearchParams({
-                    dob: `${day}/${month}/${year}`,
-                    tob: `${hour}:${minute}`,
-                    coordinates: coordinates,
-                    timezone: timezone,
-                    la: 'en'
-                });
-
-                const endpoints = ['/v2/astrology/birth-details', '/v2/astrology/astro-details', '/v2/astrology/yoga-details'];
-
-                const apiPromises = endpoints.map(endpoint =>
-                    fetch(`${PROXY_URL}${endpoint}?${baseParams.toString()}`).then(res => res.ok ? res.json() : res.json().then(err => Promise.reject({ endpoint, error: err })))
-                );
-                
-                const planetEndpoint = '/v2/astrology/natal-planet-position';
-                const planetParams = new URLSearchParams(baseParams);
-                planetParams.append('ayanamsa', '1');
-                const planetPromise = fetch(`${PROXY_URL}${planetEndpoint}?${planetParams.toString()}`).then(res => res.ok ? res.json() : res.json().then(err => Promise.reject({ endpoint: planetEndpoint, error: err })));
-
-                apiPromises.push(planetPromise);
-                
-                // --- Data Aggregation ---
-                const results = await Promise.allSettled(apiPromises);
-                
-                let kundliData = { data: {} };
-                let hasError = false;
-                let errorMessages = [];
-
-                results.forEach((result, index) => {
-                    const endpoint = [...endpoints, planetEndpoint][index];
-                    if (result.status === 'fulfilled') {
-                        if (endpoint === planetEndpoint) {
-                            kundliData.data.ascendant = result.value.data.ascendant;
-                            kundliData.data.planet_positions = result.value.data.planets;
-                        } else {
-                            Object.assign(kundliData.data, result.value.data);
-                        }
-                    } else {
-                        console.error(`Error fetching ${endpoint}:`, result.reason);
-                        errorMessages.push(`Could not fetch data for ${endpoint}.`);
-                        hasError = true;
-                    }
-                });
-
-                if (hasError) {
-                    throw new Error(errorMessages.join(' '));
-                }
-                
-                updateUI(kundliData, name);
-
-            } catch (error) {
-                console.error('An error occurred during chart generation:', error);
-                kundliDataContainer.innerHTML = `<div class="p-4 text-center text-red-600 bg-red-100 rounded-md">${error.message}</div>`;
-                resultsDiv.classList.remove('hidden');
-            } finally {
-                // Hide spinner and re-enable button
-                spinner.classList.add('hidden');
-                btnText.textContent = 'Generate Chart';
-                calculateBtn.disabled = false;
-            }
-        });
-
-        // --- UI Rendering Functions ---
-        function formatKey(key) {
-            return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        }
-
-        function renderSection(title, data) {
-            if (!data || Object.keys(data).length === 0) return '';
-            
-            let content = `<div class="p-4 border border-gray-200 rounded-lg">
-                <h3 class="text-xl font-semibold text-gray-700 mb-3">${title}</h3>`;
-            
-            if (title === 'Yogas' && Array.isArray(data)) {
-                content += '<ul class="col-span-1 sm:col-span-2 list-disc pl-5 space-y-2">';
-                data.forEach(item => {
-                    content += `<li><strong>${item.name}:</strong> ${item.description}</li>`;
-                });
-                content += '</ul>';
-            } else if (typeof data === 'object') {
-                content += `<dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">`;
-                for (const key in data) {
-                    const value = data[key];
-                    content += `<div class="grid grid-cols-2 py-1">
-                                    <dt class="font-medium text-gray-600">${formatKey(key)}</dt>
-                                    <dd class="text-gray-900">${value}</dd>
-                                </div>`;
-                }
-                content += `</dl>`;
-            }
-            content += `</div>`;
-            return content;
-        }
-
-       function renderPlanets(planets) {
-           if (!planets || !Array.isArray(planets)) {
-                return '<div class="p-4 text-red-500">Planet position data is unavailable.</div>';
-            }
-            let content = `<div class="p-4 border border-gray-200 rounded-lg">
-                <h3 class="text-xl font-semibold text-gray-700 mb-4">Planetary Positions</h3>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Planet</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sign</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">House</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Degree</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Is Retrograde</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">`;
-            
-            planets.forEach(p => {
-                content += `<tr>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${p.name}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${p.sign}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${p.house}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${p.full_degree.toFixed(2)}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${p.is_retrograde ? 'Yes' : 'No'}</td>
-                            </tr>`;
+            locationInput.addEventListener('input', (e) => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    getCoordinates(e.target.value);
+                }, 400);
             });
 
-            content += `</tbody></table></div></div>`;
-            return content;
-        }
-
-        function updateUI(kundliResponse, name) {
-            const data = kundliResponse.data;
-            if (!data) {
-                kundliDataContainer.innerHTML = `<div class="p-4 text-center text-red-600 bg-red-100 rounded-md">Failed to get any data. Please try again.</div>`;
-                resultsDiv.classList.remove('hidden');
-                return;
-            }
-            
-            if (!data.ascendant || !data.planet_positions) {
-                console.error("Incomplete data received for UI update:", data);
-                kundliDataContainer.innerHTML = `<div class="p-4 text-center text-red-600 bg-red-100 rounded-md">Error: Incomplete chart data received. Ascendant or Planet Positions are missing.</div>`;
-                resultsDiv.classList.remove('hidden');
-                return;
+            async function fetchAstroData(endpoint, params) {
+                // Add the 'endpoint' parameter for the proxy to use.
+                params.endpoint = endpoint;
+                const queryString = new URLSearchParams(params).toString();
+                const response = await fetch(`${PROXY_URL}?${queryString}`);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `API Error on ${endpoint}`);
+                }
+                return response.json();
             }
 
-            chartNameSpan.textContent = name;
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                clearError();
+                if (!appState.coordinates) {
+                    showError("Please select a valid location from the suggestions.");
+                    return;
+                }
+                
+                btnText.textContent = 'Calculating...';
+                btnLoader.classList.remove('hidden');
+                calculateBtn.disabled = true;
 
-            const birthDetails = { 'Date': data.dob, 'Time': data.tob, 'Location': data.location };
-            const astroDetails = {
-                'Ascendant': data.ascendant, 'Varna': data.varna, 'Vashya': data.vashya, 'Yoni': data.yoni,
-                'Gana': data.gana, 'Nadi': data.nadi, 'Sign Lord': data.sign_lord, 'Nakshatra': data.nakshatra,
-                'Nakshatra Lord': data.nakshatra_lord, 'Charan': data.charan, 'Yog': data.yog, 'Karan': data.karan,
-                'Tithi': data.tithi, 'Yunja': data.yunja, 'Tatva': data.tatva, 'Name Alphabet': data.name_alphabet, 'Paya': data.paya
-            };
+                const formData = new FormData(form);
+                const datetime = formData.get('datetime');
+                const [date, time] = datetime.split('T');
 
-            kundliDataContainer.innerHTML = renderSection('Birth Details', birthDetails);
-            kundliDataContainer.innerHTML += renderSection('Astro Details', astroDetails);
-            kundliDataContainer.innerHTML += renderPlanets(data.planet_positions);
-            kundliDataContainer.innerHTML += renderSection('Yogas', data.yogas);
+                const params = {
+                    datetime: `${date} ${time}`,
+                    coordinates: appState.coordinates,
+                    ayanamsa: 1,
+                    la: 'en'
+                };
 
-            resultsDiv.classList.remove('hidden');
-            resultsDiv.scrollIntoView({ behavior: 'smooth' });
-        }
+                try {
+                    const endpoints = [
+                        'v2/astrology/birth-details',
+                        'v2/astrology/kundli',
+                        'v2/astrology/planet-dasha',
+                        'v2/astrology/natal-planet-position'
+                    ];
+
+                    const requests = endpoints.map(ep => fetchAstroData(ep, params));
+                    const [birthDetails, kundliData, dashaData, planetPositionData] = await Promise.all(requests);
+                    
+                    if (planetPositionData && planetPositionData.data) {
+                        kundliData.data.ascendant = planetPositionData.data.ascendant;
+                        kundliData.data.planet_positions = planetPositionData.data.planets;
+                    }
+
+                    appState.birthDetails = birthDetails.data;
+                    appState.kundliData = kundliData.data;
+                    appState.dashaData = dashaData.data;
+
+                    updateUI();
+                } catch (error) {
+                    console.error("API Fetch Error:", error);
+                    showError(`An error occurred: ${error.message}`);
+                } finally {
+                    btnText.textContent = 'Generate Chart';
+                    btnLoader.classList.add('hidden');
+                    calculateBtn.disabled = false;
+                }
+            });
+
+            function updateUI() {
+                const chartText = `
+Birth Details:
+- Name: ${document.getElementById('name').value}
+- Date & Time: ${appState.birthDetails.datetime}
+- Location: ${locationInput.value} (${appState.coordinates})
+- Ascendant: ${appState.kundliData.ascendant}
+
+Planet Positions:
+${appState.kundliData.planet_positions.map(p => `- ${p.name}: ${p.longitude.toFixed(2)}°, House ${p.house}, ${p.rasi.name}`).join('\n')}
+
+Major Dasha Periods:
+${appState.dashaData.major_dasha.map(d => `- ${d.planet}: ${d.start} to ${d.end}`).join('\n')}
+                `;
+                chartDataEl.textContent = chartText;
+                resultsContainer.classList.remove('hidden');
+                // You can add the AI call here if needed
+                aiResponseEl.innerHTML = `<p>Chart analysis complete. Further AI insights can be generated based on this data.</p>`;
+            }
+        });
     </script>
 </body>
 </html>
