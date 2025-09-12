@@ -54,7 +54,6 @@
             resultDiv.textContent = 'Fetching...';
 
             try {
-                // CORRECTED: The proxy URL is now generic, as expected by the older function.
                 const PROXY_ENDPOINT = '/api/proxy';
 
                 const localDateTime = new Date(dateTimeInput.value);
@@ -63,17 +62,18 @@
                 const offsetMinutes = String(Math.abs(timezoneOffset) % 60).padStart(2, '0');
                 const sign = timezoneOffset >= 0 ? '+' : '-';
                 const isoDateTime = `${dateTimeInput.value}:00${sign}${offsetHours}:${offsetMinutes}`;
+                
+                // CORRECTED: Manually build the query string to control encoding precisely.
+                // The API specifically needs the '+' in the timezone to be encoded as '%2B'.
+                // Using URLSearchParams encodes other characters (like '/' and ',') which causes issues.
+                const encodedDateTime = isoDateTime.replace('+', '%2B');
+                const endpoint = '/v2/astrology/panchang';
+                const ayanamsa = '1';
+                const coordinates = coordinatesInput.value.trim();
 
-                // CORRECTED: Construct the query parameters object to include the 'endpoint'
-                // key, which the reverted proxy function requires.
-                const params = new URLSearchParams({
-                    endpoint: '/v2/astrology/panchang', // The target ProKerala endpoint
-                    ayanamsa: '1',
-                    datetime: isoDateTime,
-                    coordinates: coordinatesInput.value.trim(),
-                });
-
-                const response = await fetch(`${PROXY_ENDPOINT}?${params.toString()}`);
+                const queryString = `endpoint=${endpoint}&ayanamsa=${ayanamsa}&datetime=${encodedDateTime}&coordinates=${coordinates}`;
+                
+                const response = await fetch(`${PROXY_ENDPOINT}?${queryString}`);
                 const data = await response.json();
 
                 if (!response.ok) {
