@@ -54,11 +54,9 @@
             resultDiv.textContent = 'Fetching...';
 
             try {
-                // This URL path will be rewritten by Netlify to the proxy function.
-                const PROXY_ENDPOINT = '/api/astrology/panchang';
+                // CORRECTED: The proxy URL is now generic, as expected by the older function.
+                const PROXY_ENDPOINT = '/api/proxy';
 
-                // Format the local datetime into the ISO 8601 format with timezone offset
-                // that the Prokerala API expects. e.g., "2024-02-12T15:19:21+05:30"
                 const localDateTime = new Date(dateTimeInput.value);
                 const timezoneOffset = -localDateTime.getTimezoneOffset();
                 const offsetHours = String(Math.floor(Math.abs(timezoneOffset) / 60)).padStart(2, '0');
@@ -66,8 +64,10 @@
                 const sign = timezoneOffset >= 0 ? '+' : '-';
                 const isoDateTime = `${dateTimeInput.value}:00${sign}${offsetHours}:${offsetMinutes}`;
 
-                // Construct the query parameters object.
+                // CORRECTED: Construct the query parameters object to include the 'endpoint'
+                // key, which the reverted proxy function requires.
                 const params = new URLSearchParams({
+                    endpoint: '/v2/astrology/panchang', // The target ProKerala endpoint
                     ayanamsa: '1',
                     datetime: isoDateTime,
                     coordinates: coordinatesInput.value.trim(),
@@ -77,12 +77,10 @@
                 const data = await response.json();
 
                 if (!response.ok) {
-                    // Provide a more user-friendly error from the API response if available.
                     const errorMessage = data.error || (data.data ? data.data.message : 'An unknown API error occurred.');
                     throw new Error(`API Error (${response.status}): ${errorMessage}`);
                 }
 
-                // Display the formatted JSON response.
                 resultDiv.textContent = JSON.stringify(data, null, 2);
 
             } catch (error) {
