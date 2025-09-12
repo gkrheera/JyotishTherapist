@@ -10,12 +10,12 @@
         body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800 flex items-center justify-center min-h-screen">
+<body class="bg-gray-100 text-gray-800 flex items-center justify-center min-h-screen p-4">
 
     <div class="w-full max-w-lg p-8 space-y-6 bg-white rounded-xl shadow-lg">
         <div class="text-center">
             <h1 class="text-3xl font-bold text-gray-900">Panchang Details</h1>
-            <p class="mt-2 text-sm text-gray-600">Enter details to fetch data via the secure proxy.</p>
+            <p class="mt-2 text-sm text-gray-600">Enter your details to fetch live astrological data.</p>
         </div>
 
         <div class="space-y-4">
@@ -29,11 +29,11 @@
             </div>
         </div>
 
-        <button id="fetchButton" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        <button id="fetchButton" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400">
             Fetch Panchang Data
         </button>
 
-        <div id="result" class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200 min-h-[100px] overflow-x-auto">
+        <div id="result" class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200 min-h-[150px] overflow-x-auto">
             <pre class="text-xs text-gray-600 whitespace-pre-wrap">Results will appear here...</pre>
         </div>
     </div>
@@ -44,50 +44,56 @@
         const dateTimeInput = document.getElementById('datetime');
         const coordinatesInput = document.getElementById('coordinates');
 
-        // Set default datetime to now
+        // Set default datetime to the user's current local time.
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        dateTimeInput.value = now.toISOString().slice(0,16);
+        dateTimeInput.value = now.toISOString().slice(0, 16);
 
         fetchButton.addEventListener('click', async () => {
-            // This is the path to your Netlify proxy function.
-            const PROXY_URL = '/.netlify/functions/proxy';
-
-            // Get local datetime and format it correctly with timezone offset
-            const localDateTime = new Date(dateTimeInput.value);
-            const timezoneOffset = -localDateTime.getTimezoneOffset();
-            const offsetHours = String(Math.floor(Math.abs(timezoneOffset) / 60)).padStart(2, '0');
-            const offsetMinutes = String(Math.abs(timezoneOffset) % 60).padStart(2, '0');
-            const sign = timezoneOffset >= 0 ? '+' : '-';
-            const isoDateTime = `${dateTimeInput.value}:00${sign}${offsetHours}:${offsetMinutes}`;
-
-            // *** FIX: Renamed 'location' to 'coordinates' to match the API spec ***
-            // *** FIX: Added 'endpoint' parameter to tell the proxy which API to call ***
-            const params = new URLSearchParams({
-                endpoint: '/astrology/panchang',
-                ayanamsa: '1',
-                datetime: isoDateTime,
-                coordinates: coordinatesInput.value.trim()
-            });
-
+            fetchButton.disabled = true;
             resultDiv.textContent = 'Fetching...';
 
             try {
-                const response = await fetch(`${PROXY_URL}?${params.toString()}`);
+                // This URL path will be rewritten by Netlify to the proxy function.
+                const PROXY_ENDPOINT = '/api/astrology/panchang';
+
+                // Format the local datetime into the ISO 8601 format with timezone offset
+                // that the Prokerala API expects. e.g., "2024-02-12T15:19:21+05:30"
+                const localDateTime = new Date(dateTimeInput.value);
+                const timezoneOffset = -localDateTime.getTimezoneOffset();
+                const offsetHours = String(Math.floor(Math.abs(timezoneOffset) / 60)).padStart(2, '0');
+                const offsetMinutes = String(Math.abs(timezoneOffset) % 60).padStart(2, '0');
+                const sign = timezoneOffset >= 0 ? '+' : '-';
+                const isoDateTime = `${dateTimeInput.value}:00${sign}${offsetHours}:${offsetMinutes}`;
+
+                // Construct the query parameters object.
+                const params = new URLSearchParams({
+                    ayanamsa: '1',
+                    datetime: isoDateTime,
+                    coordinates: coordinatesInput.value.trim(),
+                });
+
+                const response = await fetch(`${PROXY_ENDPOINT}?${params.toString()}`);
                 const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(data.details || data.error || 'An error occurred.');
+                    // Provide a more user-friendly error from the API response if available.
+                    const errorMessage = data.error || (data.data ? data.data.message : 'An unknown API error occurred.');
+                    throw new Error(`API Error (${response.status}): ${errorMessage}`);
                 }
 
+                // Display the formatted JSON response.
                 resultDiv.textContent = JSON.stringify(data, null, 2);
 
             } catch (error) {
-                resultDiv.textContent = `Error fetching data:\n\n${error.message}`;
-                console.error('Error:', error);
+                resultDiv.textContent = `Error: ${error.message}`;
+                console.error('Error fetching data:', error);
+            } finally {
+                fetchButton.disabled = false;
             }
         });
     </script>
 
 </body>
 </html>
+
