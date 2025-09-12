@@ -59,7 +59,7 @@
     </div>
 
     <script>
-        // JyotishTherapist Frontend Logic v2.0
+        // JyotishTherapist Frontend Logic v2.1
         document.addEventListener('DOMContentLoaded', function() {
             const appState = { birthDetails: null, kundliData: null, dashaData: null, coordinates: null, chartData: { ascendant: '', planets: {} } };
             const form = document.getElementById('kundli-form');
@@ -74,9 +74,9 @@
             const chartDataEl = document.getElementById('chart-data');
             const aiResponseEl = document.getElementById('ai-response');
 
-            // **DEFINITIVE FIX**: This is the direct, stable URL for the Netlify proxy function.
-            // This architecture avoids complex and error-prone redirect rules.
-            const PROXY_URL = 'https://jyotishtherapist-proxy.netlify.app/.netlify/functions/proxy';
+            // The URL now points to the clean root of the proxy site.
+            // The redirect rule in netlify.toml will handle routing this to the function.
+            const PROXY_URL = 'https://jyotishtherapist-proxy.netlify.app';
             let debounceTimer;
 
             function showError(message) { errorDisplay.innerHTML = message; errorDisplay.classList.remove('hidden'); }
@@ -91,10 +91,10 @@
                 coordsDisplay.textContent = 'Searching...';
                 clearError();
                 try {
-                    // The endpoint is now passed explicitly as a query parameter named 'endpoint'.
-                    const endpoint = 'v2/location/geo-details';
-                    const params = new URLSearchParams({ query: placeName, endpoint: endpoint }).toString();
-                    const response = await fetch(`${PROXY_URL}?${params}`);
+                    // The endpoint is now appended directly to the clean proxy URL.
+                    const endpoint = '/v2/location/geo-details';
+                    const params = new URLSearchParams({ query: placeName }).toString();
+                    const response = await fetch(`${PROXY_URL}${endpoint}?${params}`);
                     
                     if (!response.ok) { throw new Error(`Network error: ${response.statusText}`); }
                     const data = await response.json();
@@ -133,10 +133,9 @@
             });
 
             async function fetchAstroData(endpoint, params) {
-                // Add the 'endpoint' parameter for the proxy to use.
-                params.endpoint = endpoint;
+                // The endpoint is now appended directly to the clean proxy URL.
                 const queryString = new URLSearchParams(params).toString();
-                const response = await fetch(`${PROXY_URL}?${queryString}`);
+                const response = await fetch(`${PROXY_URL}${endpoint}?${queryString}`);
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(errorData.error || `API Error on ${endpoint}`);
@@ -169,10 +168,10 @@
 
                 try {
                     const endpoints = [
-                        'v2/astrology/birth-details',
-                        'v2/astrology/kundli',
-                        'v2/astrology/planet-dasha',
-                        'v2/astrology/natal-planet-position'
+                        '/v2/astrology/birth-details',
+                        '/v2/astrology/kundli',
+                        '/v2/astrology/planet-dasha',
+                        '/v2/astrology/natal-planet-position'
                     ];
 
                     const requests = endpoints.map(ep => fetchAstroData(ep, params));
